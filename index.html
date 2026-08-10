@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robot Arm Simulator</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="workspace" aria-label="Robot arm simulator">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Kinematics Lab</p>
+          <h1>Robot Arm Simulator</h1>
+        </div>
+        <div class="status-card" id="reachStatus">
+          <span class="status-dot"></span>
+          <span id="statusText">Ready</span>
+        </div>
+      </header>
+
+      <div class="sim-layout">
+        <aside class="control-panel" aria-label="Controls">
+          <section class="panel-section">
+            <div class="section-title">Mode</div>
+            <div class="segmented mode-seg" role="radiogroup" aria-label="Mode">
+              <label><input type="radio" name="mode" value="IK" checked><span>IK</span></label>
+              <label><input type="radio" name="mode" value="FK"><span>FK</span></label>
+              <label><input type="radio" name="mode" value="DH"><span>DH</span></label>
+            </div>
+          </section>
+
+          <div id="controlsStd">
+            <section class="panel-section">
+              <div class="section-title">Links</div>
+              <div class="segmented" role="radiogroup" aria-label="Link count">
+                <label><input type="radio" name="linkCount" value="2" checked><span>2 Links</span></label>
+                <label><input type="radio" name="linkCount" value="3"><span>3 Links</span></label>
+              </div>
+            </section>
+            <section class="panel-section">
+              <div class="section-head"><div class="section-title">Link Lengths</div><span class="unit-label">px</span></div>
+              <div class="field-grid">
+                <label class="field"><span>L1</span><input type="number" id="L1" min="10" max="240" value="120"></label>
+                <label class="field"><span>L2</span><input type="number" id="L2" min="10" max="240" value="100"></label>
+                <label class="field" id="L3Field"><span>L3</span><input type="number" id="L3" min="10" max="240" value="80"></label>
+              </div>
+            </section>
+            <section class="panel-section" id="ikPanel">
+              <div class="section-head">
+                <div class="section-title">Target</div>
+                <button class="text-button" id="centerTargetBtn" type="button">Center</button>
+              </div>
+              <div class="field-grid">
+                <label class="field"><span>X</span><input type="number" id="xTarget" value="100"></label>
+                <label class="field"><span>Y</span><input type="number" id="yTarget" value="30"></label>
+              </div>
+              <div class="radio-stack" id="elbowPanel">
+                <label><input type="radio" name="elbow" value="down" checked> Elbow down</label>
+                <label><input type="radio" name="elbow" value="up"> Elbow up</label>
+              </div>
+              <div class="hint" id="ccdHint">3-link IK uses CCD solving.</div>
+            </section>
+            <section class="panel-section" id="fkPanel">
+              <div class="section-title">Joint Angles</div>
+              <div class="slider-field"><label>theta 1</label><input type="range" id="theta1Range" min="-180" max="180" value="20"><input type="number" id="theta1In" value="20"></div>
+              <div class="slider-field"><label>theta 2</label><input type="range" id="theta2Range" min="-180" max="180" value="20"><input type="number" id="theta2In" value="20"></div>
+              <div class="slider-field" id="theta3Field"><label>theta 3</label><input type="range" id="theta3Range" min="-180" max="180" value="10"><input type="number" id="theta3In" value="10"></div>
+            </section>
+            <section class="panel-section">
+              <div class="section-title">Presets</div>
+              <div class="button-grid">
+                <button type="button" data-preset="inspect">Inspect</button>
+                <button type="button" data-preset="reach">Reach</button>
+                <button type="button" data-preset="fold">Fold</button>
+                <button type="button" id="resetBtn">Reset</button>
+              </div>
+            </section>
+          </div>
+
+          <div id="controlsDH" style="display:none">
+            <section class="panel-section">
+              <div class="section-head"><div class="section-title">Joints</div></div>
+              <div class="joint-counter">
+                <button class="counter-btn" id="jointMinus" type="button">-</button>
+                <span class="counter-val" id="jointCountVal">3</span>
+                <button class="counter-btn" id="jointPlus" type="button">+</button>
+              </div>
+              <div class="dh-note">Add joints from 2 to 6</div>
+            </section>
+            <section class="panel-section">
+              <div class="section-head"><div class="section-title">DH Parameters</div><span class="unit-label">Standard DH</span></div>
+              <div class="dh-table-wrap">
+                <table class="dh-table">
+                  <thead><tr><th>#</th><th>&theta;</th><th>d</th><th>a</th><th>&alpha;</th></tr></thead>
+                  <tbody id="dhBody"></tbody>
+                </table>
+              </div>
+              <div class="dh-note">theta = joint variable. d, a, alpha = fixed constants.</div>
+            </section>
+            <section class="panel-section">
+              <div class="section-title">Joint Angles</div>
+              <div id="dhSliders"></div>
+            </section>
+            <section class="panel-section">
+              <div class="section-title">Presets</div>
+              <div class="button-grid">
+                <button type="button" data-dh-preset="home">Home</button>
+                <button type="button" data-dh-preset="reach">Reach</button>
+                <button type="button" data-dh-preset="fold">Fold</button>
+                <button type="button" id="dhResetBtn">Reset</button>
+              </div>
+            </section>
+          </div>
+        </aside>
+
+        <section class="canvas-panel" id="panel2D">
+          <div class="canvas-toolbar">
+            <div><strong id="modeLabel">Inverse Kinematics</strong><span id="solverLabel">Analytic 2-link</span></div>
+            <label class="toggle"><input type="checkbox" id="showReach" checked><span>Reach zone</span></label>
+          </div>
+          <div class="canvas-wrap">
+            <canvas id="canvasArea" width="720" height="720"></canvas>
+          </div>
+        </section>
+
+        <section class="canvas-panel" id="panel3D" style="display:none">
+          <div class="canvas-toolbar">
+            <div><strong id="dhModeLabel">DH Forward Kinematics</strong><span id="dhSolverLabel">Drag to rotate, scroll to zoom</span></div>
+          </div>
+          <div id="threeContainer" class="three-container"></div>
+        </section>
+
+        <aside class="results-panel">
+          <section class="metric-grid">
+            <div class="metric"><span>End X</span><strong id="endX">0.0</strong></div>
+            <div class="metric"><span>End Y</span><strong id="endY">0.0</strong></div>
+            <div class="metric" id="endZMetric" style="display:none"><span>End Z</span><strong id="endZ">0.0</strong></div>
+            <div class="metric"><span>Error</span><strong id="errorMetric">0.0</strong></div>
+            <div class="metric"><span>Reach</span><strong id="reachMetric">0-0</strong></div>
+          </section>
+          <section class="joint-table">
+            <div class="section-title">Joint Output</div>
+            <div id="jointOutput"></div>
+          </section>
+          <section class="mini-card" id="dhMatrixCard" style="display:none">
+            <div class="section-title">End-Effector Transform</div>
+            <div class="matrix-display"><pre id="dhMatrix">Identity</pre></div>
+          </section>
+          <section class="mini-card">
+            <div class="section-title">Solver</div>
+            <p id="solverNote">Analytic inverse kinematics</p>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
