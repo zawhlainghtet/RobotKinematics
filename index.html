@@ -145,10 +145,23 @@
             <div class="metric" id="endZMetric" style="display:none"><span>End Z</span><strong id="endZ">0.0</strong></div>
             <div class="metric"><span>Error</span><strong id="errorMetric">0.0</strong></div>
             <div class="metric"><span>Reach</span><strong id="reachMetric">0-0</strong></div>
+            <div class="metric" id="singularityMetric"><span>Singularity</span><strong id="singularityState">Stable</strong></div>
           </section>
           <section class="joint-table">
             <div class="section-title">Joint Output</div>
             <div id="jointOutput"></div>
+          </section>
+          <section class="mini-card singularity-card stable" id="singularityCard">
+            <div class="section-head">
+              <div class="section-title">Jacobian Condition</div>
+              <span class="singularity-badge" id="singularityBadge">Stable</span>
+            </div>
+            <div class="singularity-bar" aria-hidden="true"><span id="singularityBarFill"></span></div>
+            <div class="singularity-values">
+              <span>&sigma;<sub>min</sub> <strong id="sigmaMin">0.000</strong></span>
+              <span>Condition <strong id="conditionNumber">&infin;</strong></span>
+            </div>
+            <p id="singularityNote">Position Jacobian is well-conditioned.</p>
           </section>
           <section class="mini-card" id="dhMatrixCard" style="display:none">
             <div class="section-title">End-Effector Transform</div>

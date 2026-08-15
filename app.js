@@ -40,6 +40,59 @@ function fk(lv, angles) {
   return { x, y, joints };
 }
 
+// Position Jacobian singular values for a planar revolute chain.
+function jacobianMetrics(lv, angles) {
+  const cumulative = [];
+  let angle = 0;
+  for (let i = 0; i < lv.length; i++) {
+    angle += angles[i] || 0;
+    cumulative.push(angle);
+  }
+
+  // J is 2 x N. Build J*J^T directly to avoid a matrix dependency.
+  let jxx = 0, jxy = 0, jyy = 0;
+  for (let j = 0; j < lv.length; j++) {
+    let dx = 0, dy = 0;
+    for (let k = j; k < lv.length; k++) {
+      dx -= lv[k] * Math.sin(cumulative[k]);
+      dy += lv[k] * Math.cos(cumulative[k]);
+    }
+    jxx += dx * dx;
+    jxy += dx * dy;
+    jyy += dy * dy;
+  }
+
+  const trace = jxx + jyy;
+  const det = Math.max(0, jxx * jyy - jxy * jxy);
+  const discriminant = Math.sqrt(Math.max(0, trace * trace - 4 * det));
+  const sigmaMax = Math.sqrt(Math.max(0, (trace + discriminant) / 2));
+  const sigmaMin = Math.sqrt(Math.max(0, (trace - discriminant) / 2));
+  const condition = sigmaMin < 1e-9 ? Infinity : sigmaMax / sigmaMin;
+  const normalized = sigmaMin / Math.max(1, lv.reduce((sum, value) => sum + value, 0));
+  const level = normalized < 0.005 ? 'singular' : normalized < 0.03 ? 'near' : 'stable';
+  return { sigmaMin, sigmaMax, condition, normalized, level };
+}
+
+function updateSingularity(lv, angles) {
+  const result = jacobianMetrics(lv, angles);
+  const labels = { stable: 'Stable', near: 'Near Singularity', singular: 'Singular' };
+  const notes = {
+    stable: 'Position Jacobian is well-conditioned.',
+    near: 'Motion sensitivity is high. Joint velocity may rise quickly.',
+    singular: 'A Cartesian motion direction is lost at this configuration.',
+  };
+  const label = labels[result.level];
+  $('singularityCard').className = `mini-card singularity-card ${result.level}`;
+  $('singularityBadge').textContent = label;
+  $('singularityState').textContent = label;
+  $('singularityState').className = result.level;
+  $('sigmaMin').textContent = result.sigmaMin.toFixed(3);
+  $('conditionNumber').textContent = Number.isFinite(result.condition) ? result.condition.toFixed(1) : '∞';
+  $('singularityNote').textContent = notes[result.level];
+  $('singularityBarFill').style.width = `${clamp(result.normalized / 0.12 * 100, 2, 100)}%`;
+  return result;
+}
+
 function ik2(l1, l2, x, y, elbow) {
   const r = Math.hypot(x, y);
   if (r > l1 + l2 || r < Math.abs(l1 - l2)) return { ok: false };
@@ -441,6 +494,8 @@ function updateVisibility() {
   $('panel3D').style.display = isDH ? '' : 'none';
   $('endZMetric').style.display = isDH ? '' : 'none';
   $('dhMatrixCard').style.display = isDH ? '' : 'none';
+  $('singularityMetric').style.display = isDH ? 'none' : '';
+  $('singularityCard').style.display = isDH ? 'none' : '';
 
   $('ikPanel').classList.toggle('hidden', !isIk);
   $('fkPanel').classList.toggle('hidden', isIk || isDH);
@@ -536,8 +591,11 @@ function update() {
     if (el) el.textContent = `${rad2deg(th[i]||0).toFixed(1)} deg`;
   }
 
+  const singularity = updateSingularity(lv, th);
   if (tgt && !ok) setStatus('Target outside reach', 'error');
   else if (tgt && err > 1) setStatus('Approximate solution', 'warning');
+  else if (singularity.level === 'singular') setStatus('Singular configuration', 'error');
+  else if (singularity.level === 'near') setStatus('Near singularity', 'warning');
   else setStatus('Ready');
 }
 

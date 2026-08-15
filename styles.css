@@ -287,6 +287,45 @@ canvas {
   border-radius: 8px;
   background: #fbfdff;
 }
+.singularity-card .section-title { margin-bottom: 0; }
+.singularity-badge {
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--teal);
+  background: rgba(15, 159, 143, 0.1);
+}
+.singularity-bar {
+  height: 8px;
+  margin: 12px 0 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--panel-soft);
+}
+.singularity-bar span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--teal);
+  transition: width 0.2s ease, background 0.2s ease;
+}
+.singularity-values {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.singularity-values strong { color: var(--ink); }
+.singularity-card.near .singularity-badge { color: var(--amber); background: rgba(183, 121, 31, 0.12); }
+.singularity-card.near .singularity-bar span { background: var(--amber); }
+.singularity-card.singular .singularity-badge { color: var(--red); background: rgba(223, 63, 63, 0.11); }
+.singularity-card.singular .singularity-bar span { background: var(--red); }
+#singularityState.near { color: var(--amber); }
+#singularityState.singular { color: var(--red); }
+#singularityState.stable { color: var(--teal); }
 .metric { padding: 10px; }
 .metric span { display: block; color: var(--muted); font-size: 0.78rem; font-weight: 800; }
 .metric strong { display: block; margin-top: 4px; font-size: 1.1rem; }
