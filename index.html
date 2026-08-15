@@ -34,9 +34,11 @@
           <div id="controlsStd">
             <section class="panel-section">
               <div class="section-title">Links</div>
-              <div class="segmented" role="radiogroup" aria-label="Link count">
+              <div class="segmented link-count-seg" role="radiogroup" aria-label="Link count">
                 <label><input type="radio" name="linkCount" value="2" checked><span>2 Links</span></label>
                 <label><input type="radio" name="linkCount" value="3"><span>3 Links</span></label>
+                <label><input type="radio" name="linkCount" value="4"><span>4 Links</span></label>
+                <label><input type="radio" name="linkCount" value="5"><span>5 Links</span></label>
               </div>
             </section>
             <section class="panel-section">
@@ -45,6 +47,8 @@
                 <label class="field"><span>L1</span><input type="number" id="L1" min="10" max="240" value="120"></label>
                 <label class="field"><span>L2</span><input type="number" id="L2" min="10" max="240" value="100"></label>
                 <label class="field" id="L3Field"><span>L3</span><input type="number" id="L3" min="10" max="240" value="80"></label>
+                <label class="field" id="L4Field"><span>L4</span><input type="number" id="L4" min="10" max="240" value="65"></label>
+                <label class="field" id="L5Field"><span>L5</span><input type="number" id="L5" min="10" max="240" value="50"></label>
               </div>
             </section>
             <section class="panel-section" id="ikPanel">
@@ -60,13 +64,15 @@
                 <label><input type="radio" name="elbow" value="down" checked> Elbow down</label>
                 <label><input type="radio" name="elbow" value="up"> Elbow up</label>
               </div>
-              <div class="hint" id="ccdHint">3-link IK uses CCD solving.</div>
+              <div class="hint" id="ccdHint">3–5 link IK uses CCD solving.</div>
             </section>
             <section class="panel-section" id="fkPanel">
               <div class="section-title">Joint Angles</div>
               <div class="slider-field"><label>theta 1</label><input type="range" id="theta1Range" min="-180" max="180" value="20"><input type="number" id="theta1In" value="20"></div>
               <div class="slider-field"><label>theta 2</label><input type="range" id="theta2Range" min="-180" max="180" value="20"><input type="number" id="theta2In" value="20"></div>
               <div class="slider-field" id="theta3Field"><label>theta 3</label><input type="range" id="theta3Range" min="-180" max="180" value="10"><input type="number" id="theta3In" value="10"></div>
+              <div class="slider-field" id="theta4Field"><label>theta 4</label><input type="range" id="theta4Range" min="-180" max="180" value="0"><input type="number" id="theta4In" value="0"></div>
+              <div class="slider-field" id="theta5Field"><label>theta 5</label><input type="range" id="theta5Range" min="-180" max="180" value="0"><input type="number" id="theta5In" value="0"></div>
             </section>
             <section class="panel-section">
               <div class="section-title">Presets</div>

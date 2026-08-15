@@ -5,7 +5,10 @@ const ctx = canvas.getContext('2d');
 const cx = canvas.width / 2;
 const cy = canvas.height / 2;
 
-const state = { draggingTarget: false, lastThetas: [0, 0, 0] };
+const state = { draggingTarget: false, lastThetas: [0, 0, 0, 0, 0], viewScale: 1 };
+const STD_JOINT_MAX = 5;
+const DEFAULT_LINKS = [120, 100, 80, 65, 50];
+const DEFAULT_ANGLES = [20, 20, 10, 0, 0];
 
 const deg2rad = (d) => d * Math.PI / 180;
 const rad2deg = (r) => r * 180 / Math.PI;
@@ -21,9 +24,7 @@ function elbowMode() { return selectedValue('elbow'); }
 function numVal(id) { const v = Number($(id).value); return Number.isFinite(v) ? v : 0; }
 
 function links() {
-  const v = [clamp(numVal('L1'), 10, 240), clamp(numVal('L2'), 10, 240)];
-  if (linkCount() === 3) v.push(clamp(numVal('L3'), 10, 240));
-  return v;
+  return Array.from({ length: linkCount() }, (_, i) => clamp(numVal(`L${i + 1}`), 10, 240));
 }
 
 // ── Standard 2D FK ──
@@ -131,19 +132,19 @@ function drawReachZone(lv) {
   const mn = Math.max(0, lg - (mx - lg));
   ctx.save(); ctx.translate(cx, cy);
   ctx.fillStyle = 'rgba(37,99,235,0.06)'; ctx.strokeStyle = 'rgba(37,99,235,0.22)'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(0, 0, mx, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, mx * state.viewScale, 0, Math.PI*2); ctx.fill(); ctx.stroke();
   if (mn > 0) {
     ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath(); ctx.arc(0, 0, mn, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, mn * state.viewScale, 0, Math.PI*2); ctx.fill();
     ctx.globalCompositeOperation = 'source-over';
     ctx.strokeStyle = 'rgba(183,121,31,0.35)';
-    ctx.beginPath(); ctx.arc(0, 0, mn, 0, Math.PI*2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, mn * state.viewScale, 0, Math.PI*2); ctx.stroke();
   }
   ctx.restore();
 }
 
 function drawTarget(x, y, ok) {
-  const px = cx + x, py = cy - y;
+  const px = cx + x * state.viewScale, py = cy - y * state.viewScale;
   ctx.save();
   ctx.strokeStyle = ok ? '#2563eb' : '#df3f3f';
   ctx.fillStyle = ok ? 'rgba(37,99,235,0.14)' : 'rgba(223,63,63,0.14)';
@@ -160,14 +161,14 @@ function drawArm2D(points, count) {
     ctx.strokeStyle = LINK_COLORS[i % LINK_COLORS.length];
     ctx.lineWidth = Math.max(5, 13 - i * 2);
     ctx.beginPath();
-    ctx.moveTo(cx + points[i].x, cy - points[i].y);
-    ctx.lineTo(cx + points[i+1].x, cy - points[i+1].y);
+    ctx.moveTo(cx + points[i].x * state.viewScale, cy - points[i].y * state.viewScale);
+    ctx.lineTo(cx + points[i+1].x * state.viewScale, cy - points[i+1].y * state.viewScale);
     ctx.stroke();
   }
   points.forEach((p, i) => {
     ctx.fillStyle = i === points.length-1 ? '#2563eb' : '#ffffff';
     ctx.strokeStyle = i === 0 ? '#18202b' : '#435266'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(cx + p.x, cy - p.y, i === points.length-1 ? 9 : 8, 0, Math.PI*2);
+    ctx.beginPath(); ctx.arc(cx + p.x * state.viewScale, cy - p.y * state.viewScale, i === points.length-1 ? 9 : 8, 0, Math.PI*2);
     ctx.fill(); ctx.stroke();
   });
   ctx.restore();
@@ -431,7 +432,8 @@ function updateVisibility() {
   const m = mode();
   const isDH = m === 'DH';
   const isIk = m === 'IK';
-  const is3 = linkCount() === 3;
+  const count = linkCount();
+  const isMulti = count > 2;
 
   $('controlsStd').style.display = isDH ? 'none' : '';
   $('controlsDH').style.display = isDH ? '' : 'none';
@@ -442,10 +444,12 @@ function updateVisibility() {
 
   $('ikPanel').classList.toggle('hidden', !isIk);
   $('fkPanel').classList.toggle('hidden', isIk || isDH);
-  $('L3Field').classList.toggle('hidden', !is3);
-  $('theta3Field').classList.toggle('hidden', !is3);
-  $('elbowPanel').classList.toggle('hidden', !isIk || is3);
-  $('ccdHint').classList.toggle('hidden', !isIk || !is3);
+  for (let i = 3; i <= STD_JOINT_MAX; i++) {
+    $(`L${i}Field`).classList.toggle('hidden', count < i);
+    $(`theta${i}Field`).classList.toggle('hidden', count < i);
+  }
+  $('elbowPanel').classList.toggle('hidden', !isIk || isMulti);
+  $('ccdHint').classList.toggle('hidden', !isIk || !isMulti);
 
   if (isDH) {
     $('dhModeLabel').textContent = 'DH Forward Kinematics';
@@ -453,8 +457,8 @@ function updateVisibility() {
     $('solverNote').textContent = 'Forward kinematics using DH convention (3D)';
   } else {
     $('modeLabel').textContent = isIk ? 'Inverse Kinematics' : 'Forward Kinematics';
-    $('solverLabel').textContent = isIk ? (is3 ? 'CCD 3-link' : 'Analytic 2-link') : 'Joint angle solve';
-    $('solverNote').textContent = isIk ? (is3 ? 'CCD inverse kinematics' : 'Analytic inverse kinematics') : 'Forward kinematics';
+    $('solverLabel').textContent = isIk ? (isMulti ? `CCD ${count}-link` : 'Analytic 2-link') : `${count}-link joint angle solve`;
+    $('solverNote').textContent = isIk ? (isMulti ? `CCD inverse kinematics (${count} links)` : 'Analytic inverse kinematics') : `Forward kinematics (${count} links)`;
   }
 }
 
@@ -494,6 +498,8 @@ function update() {
   drawGrid();
   const lv = links();
   let th = [], tgt = null, ok = true;
+  const maxReach = lv.reduce((sum, value) => sum + value, 0);
+  state.viewScale = Math.min(1, (Math.min(canvas.width, canvas.height) / 2 - 42) / Math.max(maxReach, 1));
   drawReachZone(lv);
 
   if (m === 'IK') {
@@ -510,8 +516,7 @@ function update() {
     }
     drawTarget(tgt.x, tgt.y, ok);
   } else {
-    th = [deg2rad(numVal('theta1In')), deg2rad(numVal('theta2In'))];
-    if (lv.length === 3) th.push(deg2rad(numVal('theta3In')));
+    th = Array.from({ length: lv.length }, (_, i) => deg2rad(numVal(`theta${i + 1}In`)));
   }
 
   state.lastThetas = th.slice();
@@ -541,11 +546,14 @@ function update() {
 // ══════════════════════════════════════
 function canvasToWorld(e) {
   const r = canvas.getBoundingClientRect();
-  return { x: (e.clientX - r.left) * (canvas.width / r.width) - cx, y: cy - (e.clientY - r.top) * (canvas.height / r.height) };
+  return {
+    x: ((e.clientX - r.left) * (canvas.width / r.width) - cx) / state.viewScale,
+    y: (cy - (e.clientY - r.top) * (canvas.height / r.height)) / state.viewScale,
+  };
 }
 
 function init() {
-  buildJointOutput(3);
+  buildJointOutput(linkCount());
 
   [...document.getElementsByName('mode')].forEach(el => el.addEventListener('change', () => {
     const m = mode();
@@ -559,8 +567,8 @@ function init() {
   }));
 
   ['elbow'].forEach(n => [...document.getElementsByName(n)].forEach(el => el.addEventListener('change', update)));
-  ['L1','L2','L3','xTarget','yTarget','showReach'].forEach(id => $(id).addEventListener('input', update));
-  ['theta1','theta2','theta3'].forEach(base => {
+  [...Array.from({ length: STD_JOINT_MAX }, (_, i) => `L${i + 1}`), 'xTarget', 'yTarget', 'showReach'].forEach(id => $(id).addEventListener('input', update));
+  Array.from({ length: STD_JOINT_MAX }, (_, i) => `theta${i + 1}`).forEach(base => {
     $(`${base}Range`).addEventListener('input', e => { $(`${base}In`).value = e.target.value; update(); });
     $(`${base}In`).addEventListener('input', e => { $(`${base}Range`).value = e.target.value; update(); });
   });
@@ -568,19 +576,25 @@ function init() {
   document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => {
     const n = b.dataset.preset;
     if (n === 'inspect') { document.querySelector('input[name="mode"][value="IK"]').checked = true; $('xTarget').value=150; $('yTarget').value=80; }
-    if (n === 'reach') { document.querySelector('input[name="mode"][value="FK"]').checked = true; syncSlider('theta1',10); syncSlider('theta2',18); syncSlider('theta3',6); }
-    if (n === 'fold') { document.querySelector('input[name="mode"][value="FK"]').checked = true; syncSlider('theta1',120); syncSlider('theta2',-135); syncSlider('theta3',85); }
+    if (n === 'reach') {
+      document.querySelector('input[name="mode"][value="FK"]').checked = true;
+      [10, 18, 6, -8, 12].forEach((value, i) => syncSlider(`theta${i + 1}`, value));
+    }
+    if (n === 'fold') {
+      document.querySelector('input[name="mode"][value="FK"]').checked = true;
+      [120, -135, 85, -70, 45].forEach((value, i) => syncSlider(`theta${i + 1}`, value));
+    }
     buildJointOutput(linkCount()); update();
   }));
 
   $('resetBtn').addEventListener('click', () => {
-    $('L1').value=120; $('L2').value=100; $('L3').value=80;
+    DEFAULT_LINKS.forEach((value, i) => { $(`L${i + 1}`).value = value; });
     $('xTarget').value=100; $('yTarget').value=30;
-    syncSlider('theta1',20); syncSlider('theta2',20); syncSlider('theta3',10);
+    DEFAULT_ANGLES.forEach((value, i) => syncSlider(`theta${i + 1}`, value));
     document.querySelector('input[name="mode"][value="IK"]').checked = true;
     document.querySelector('input[name="linkCount"][value="2"]').checked = true;
     document.querySelector('input[name="elbow"][value="down"]').checked = true;
-    state.lastThetas = [0,0,0]; buildJointOutput(2); update();
+    state.lastThetas = [0,0,0,0,0]; buildJointOutput(2); update();
   });
 
   $('centerTargetBtn').addEventListener('click', () => { $('xTarget').value=0; $('yTarget').value=0; update(); });

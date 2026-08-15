@@ -136,6 +136,8 @@ h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.7rem); line-height: 1.05; }
 .mode-seg {
   grid-template-columns: repeat(3, 1fr);
 }
+.link-count-seg { grid-template-columns: repeat(4, 1fr); }
+.link-count-seg span { padding-inline: 4px; font-size: 0.78rem; }
 
 .field-grid, .field-grid-3 { display: grid; gap: 8px; }
 .field-grid { grid-template-columns: repeat(2, 1fr); }
