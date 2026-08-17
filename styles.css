@@ -319,6 +319,7 @@ canvas {
   font-size: 0.78rem;
 }
 .singularity-values strong { color: var(--ink); }
+.dh-singularity-values { flex-wrap: wrap; }
 .singularity-card.near .singularity-badge { color: var(--amber); background: rgba(183, 121, 31, 0.12); }
 .singularity-card.near .singularity-bar span { background: var(--amber); }
 .singularity-card.singular .singularity-badge { color: var(--red); background: rgba(223, 63, 63, 0.11); }

@@ -161,6 +161,56 @@ function fkDH(dhParams) {
   return { x: end.x, y: end.y, z: end.z, joints, matrices };
 }
 
+// Full geometric Jacobian for the current all-revolute Standard-DH chain.
+// Linear rows are normalized by a characteristic length for condition metrics,
+// so millimetres and radians do not distort the singular-value comparison.
+function dhJacobianMetrics(dhParams, fkResult) {
+  const n = dhParams.length;
+  const end = [fkResult.x, fkResult.y, fkResult.z];
+  const J = Array.from({ length: 6 }, () => Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    const Tprev = i === 0 ? null : fkResult.matrices[i - 1];
+    const origin = Tprev ? [Tprev[0][3], Tprev[1][3], Tprev[2][3]] : [0, 0, 0];
+    const z = Tprev ? [Tprev[0][2], Tprev[1][2], Tprev[2][2]] : [0, 0, 1];
+    const r = [end[0] - origin[0], end[1] - origin[1], end[2] - origin[2]];
+    J[0][i] = z[1] * r[2] - z[2] * r[1];
+    J[1][i] = z[2] * r[0] - z[0] * r[2];
+    J[2][i] = z[0] * r[1] - z[1] * r[0];
+    J[3][i] = z[0]; J[4][i] = z[1]; J[5][i] = z[2];
+  }
+
+  const length = Math.max(1, dhParams.reduce((s, d) => s + Math.abs(d.a) + Math.abs(d.d), 0));
+  const A = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) =>
+    J.reduce((sum, row, k) => sum + (k < 3 ? row[i] / length : row[i]) * (k < 3 ? row[j] / length : row[j]), 0)));
+
+  // Jacobi eigenvalue iteration for the small symmetric J^T J matrix (N <= 6).
+  for (let iter = 0; iter < 80; iter++) {
+    let p = 0, q = 1, largest = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      if (Math.abs(A[i][j]) > largest) { largest = Math.abs(A[i][j]); p = i; q = j; }
+    }
+    if (largest < 1e-12) break;
+    const angle = 0.5 * Math.atan2(2 * A[p][q], A[q][q] - A[p][p]);
+    const c = Math.cos(angle), s = Math.sin(angle);
+    const app = c*c*A[p][p] - 2*s*c*A[p][q] + s*s*A[q][q];
+    const aqq = s*s*A[p][p] + 2*s*c*A[p][q] + c*c*A[q][q];
+    for (let k = 0; k < n; k++) if (k !== p && k !== q) {
+      const akp = A[k][p], akq = A[k][q];
+      A[k][p] = A[p][k] = c*akp - s*akq;
+      A[k][q] = A[q][k] = s*akp + c*akq;
+    }
+    A[p][p] = app; A[q][q] = aqq; A[p][q] = A[q][p] = 0;
+  }
+  const singularValues = A.map((row, i) => Math.sqrt(Math.max(0, row[i]))).sort((a,b) => b-a);
+  const sigmaMax = singularValues[0] || 0;
+  const sigmaMin = singularValues[singularValues.length - 1] || 0;
+  const condition = sigmaMin < 1e-6 ? Infinity : sigmaMax / sigmaMin;
+  const rank = singularValues.filter(v => v > Math.max(1e-6, sigmaMax * 1e-4)).length;
+  const ratio = sigmaMax > 0 ? sigmaMin / sigmaMax : 0;
+  const level = rank < n || ratio < 0.005 ? 'singular' : ratio < 0.03 ? 'near' : 'stable';
+  return { J, sigmaMin, condition, rank, level };
+}
+
 // ══════════════════════════════════════
 //  2D Drawing
 // ══════════════════════════════════════
@@ -494,6 +544,7 @@ function updateVisibility() {
   $('panel3D').style.display = isDH ? '' : 'none';
   $('endZMetric').style.display = isDH ? '' : 'none';
   $('dhMatrixCard').style.display = isDH ? '' : 'none';
+  $('dhJacobianCard').style.display = isDH ? '' : 'none';
   $('singularityMetric').style.display = isDH ? 'none' : '';
   $('singularityCard').style.display = isDH ? 'none' : '';
 
@@ -545,6 +596,20 @@ function update() {
       `${f(T[1][0])} ${f(T[1][1])} ${f(T[1][2])}  ${f(T[1][3])}\n` +
       `${f(T[2][0])} ${f(T[2][1])} ${f(T[2][2])}  ${f(T[2][3])}\n` +
       `${f(T[3][0])} ${f(T[3][1])} ${f(T[3][2])}  ${f(T[3][3])}`;
+    const jac = dhJacobianMetrics(stateDH.dh, res);
+    const jf = v => Math.abs(v) < 0.0005 ? '0.000' : v.toFixed(3);
+    $('dhJacobian').textContent = jac.J.map(row => row.map(jf).join('  ')).join('\n');
+    const labels = { stable: 'Stable', near: 'Near Singularity', singular: 'Singular' };
+    $('dhSingularityBadge').textContent = labels[jac.level];
+    $('dhJacobianCard').className = `mini-card singularity-card ${jac.level}`;
+    $('dhRank').textContent = `${jac.rank}/${n}`;
+    $('dhSigmaMin').textContent = jac.sigmaMin.toFixed(4);
+    $('dhConditionNumber').textContent = Number.isFinite(jac.condition) ? jac.condition.toFixed(1) : '∞';
+    $('dhSingularityNote').textContent = jac.level === 'stable'
+      ? 'The normalized geometric Jacobian has full column rank.'
+      : jac.level === 'near'
+        ? 'The chain is close to losing an instantaneous motion direction.'
+        : 'The chain has lost an instantaneous motion direction at this configuration.';
     setStatus('Ready');
     return;
   }
