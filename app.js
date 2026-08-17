@@ -598,7 +598,13 @@ function update() {
       `${f(T[3][0])} ${f(T[3][1])} ${f(T[3][2])}  ${f(T[3][3])}`;
     const jac = dhJacobianMetrics(stateDH.dh, res);
     const jf = v => Math.abs(v) < 0.0005 ? '0.000' : v.toFixed(3);
-    $('dhJacobian').textContent = jac.J.map(row => row.map(jf).join('  ')).join('\n');
+    const rowLabels = ['Vx', 'Vy', 'Vz', 'ωx', 'ωy', 'ωz'];
+    $('dhJacobian').innerHTML =
+      `<table class="jacobian-table"><thead><tr><th>Motion</th>${
+        Array.from({ length: n }, (_, i) => `<th>J${i + 1}</th>`).join('')
+      }</tr></thead><tbody>${jac.J.map((row, r) =>
+        `<tr><th>${rowLabels[r]}</th>${row.map(v => `<td>${jf(v)}</td>`).join('')}</tr>`
+      ).join('')}</tbody></table>`;
     const labels = { stable: 'Stable', near: 'Near Singularity', singular: 'Singular' };
     $('dhSingularityBadge').textContent = labels[jac.level];
     $('dhJacobianCard').className = `mini-card singularity-card ${jac.level}`;

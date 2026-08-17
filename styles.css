@@ -357,6 +357,31 @@ canvas {
   color: var(--ink);
   white-space: pre;
 }
+.jacobian-table-wrap { padding: 0; }
+.jacobian-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+.jacobian-table th, .jacobian-table td {
+  padding: 7px 9px;
+  text-align: right;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.jacobian-table thead th {
+  color: var(--blue);
+  background: rgba(37, 99, 235, 0.06);
+}
+.jacobian-table tbody th {
+  color: var(--teal);
+  text-align: left;
+  background: rgba(15, 159, 143, 0.05);
+}
+.jacobian-table th:last-child, .jacobian-table td:last-child { border-right: 0; }
+.jacobian-table tbody tr:last-child th, .jacobian-table tbody tr:last-child td { border-bottom: 0; }
 
 .hidden { display: none !important; }
 
