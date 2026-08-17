@@ -129,6 +129,7 @@ const DH_DEFAULTS = [
   { theta: 0,   d: 80,  a: 0,   alpha: -90 },
   { theta: 0,   d: 0,   a: 60,  alpha: 90  },
   { theta: 0,   d: 40,  a: 0,   alpha: 0   },
+  { theta: 0,   d: 30,  a: 0,   alpha: 90  },
 ];
 const stateDH = { jointCount: 3, dh: DH_DEFAULTS.slice(0, 3).map(d => ({ ...d })) };
 
@@ -183,7 +184,7 @@ function dhJacobianMetrics(dhParams, fkResult) {
   const A = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) =>
     J.reduce((sum, row, k) => sum + (k < 3 ? row[i] / length : row[i]) * (k < 3 ? row[j] / length : row[j]), 0)));
 
-  // Jacobi eigenvalue iteration for the small symmetric J^T J matrix (N <= 6).
+  // Jacobi eigenvalue iteration for the small symmetric J^T J matrix (N <= 7).
   for (let iter = 0; iter < 80; iter++) {
     let p = 0, q = 1, largest = 0;
     for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
@@ -202,19 +203,21 @@ function dhJacobianMetrics(dhParams, fkResult) {
     A[p][p] = app; A[q][q] = aqq; A[p][q] = A[q][p] = 0;
   }
   const singularValues = A.map((row, i) => Math.sqrt(Math.max(0, row[i]))).sort((a,b) => b-a);
+  const expectedRank = Math.min(6, n);
   const sigmaMax = singularValues[0] || 0;
-  const sigmaMin = singularValues[singularValues.length - 1] || 0;
+  // For redundant chains (N > 6), ignore the expected joint-space null value.
+  const sigmaMin = singularValues[expectedRank - 1] || 0;
   const condition = sigmaMin < 1e-6 ? Infinity : sigmaMax / sigmaMin;
-  const rank = singularValues.filter(v => v > Math.max(1e-6, sigmaMax * 1e-4)).length;
+  const rank = Math.min(6, singularValues.filter(v => v > Math.max(1e-6, sigmaMax * 1e-4)).length);
   const ratio = sigmaMax > 0 ? sigmaMin / sigmaMax : 0;
-  const level = rank < n || ratio < 0.005 ? 'singular' : ratio < 0.03 ? 'near' : 'stable';
-  return { J, sigmaMin, condition, rank, level };
+  const level = rank < expectedRank || ratio < 0.005 ? 'singular' : ratio < 0.03 ? 'near' : 'stable';
+  return { J, sigmaMin, condition, rank, expectedRank, level };
 }
 
 // ══════════════════════════════════════
 //  2D Drawing
 // ══════════════════════════════════════
-const LINK_COLORS = ['#18202b','#df3f3f','#0f9f8f','#7c3aed','#2563eb','#ea580c'];
+const LINK_COLORS = ['#18202b','#df3f3f','#0f9f8f','#7c3aed','#2563eb','#ea580c','#db2777'];
 
 function drawGrid() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -344,7 +347,7 @@ function buildDHSliders() {
 let scene, camera, renderer, orbit;
 let armGroup, gridHelper, axesHelper;
 const linkMeshes = [], jointMeshes = [], frameArrows = [];
-const THREE_COLORS = [0x1e293b, 0xdc2626, 0x0d9488, 0x7c3aed, 0x2563eb, 0xea580c];
+const THREE_COLORS = [0x1e293b, 0xdc2626, 0x0d9488, 0x7c3aed, 0x2563eb, 0xea580c, 0xdb2777];
 
 function init3D() {
   const c = $('threeContainer');
@@ -608,7 +611,7 @@ function update() {
     const labels = { stable: 'Stable', near: 'Near Singularity', singular: 'Singular' };
     $('dhSingularityBadge').textContent = labels[jac.level];
     $('dhJacobianCard').className = `mini-card singularity-card ${jac.level}`;
-    $('dhRank').textContent = `${jac.rank}/${n}`;
+    $('dhRank').textContent = `${jac.rank}/${jac.expectedRank}`;
     $('dhSigmaMin').textContent = jac.sigmaMin.toFixed(4);
     $('dhConditionNumber').textContent = Number.isFinite(jac.condition) ? jac.condition.toFixed(1) : '∞';
     $('dhSingularityNote').textContent = jac.level === 'stable'
@@ -751,7 +754,7 @@ function init() {
     }
   });
   $('jointPlus').addEventListener('click', () => {
-    if (stateDH.jointCount < 6) {
+    if (stateDH.jointCount < 7) {
       stateDH.jointCount++;
       stateDH.dh.push({ ...DH_DEFAULTS[stateDH.jointCount - 1] });
       $('jointCountVal').textContent = stateDH.jointCount;
