@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=8">
 </head>
 <body>
   <main class="app-shell">
@@ -25,9 +25,10 @@
           <section class="panel-section">
             <div class="section-title">Mode</div>
             <div class="segmented mode-seg" role="radiogroup" aria-label="Mode">
-              <label><input type="radio" name="mode" value="IK" checked><span>IK</span></label>
-              <label><input type="radio" name="mode" value="FK"><span>FK</span></label>
+              <label><input type="radio" name="mode" value="FK" checked><span>FK 2D</span></label>
               <label><input type="radio" name="mode" value="DH"><span>DH</span></label>
+              <label><input type="radio" name="mode" value="IK"><span>IK 2D</span></label>
+              <label><input type="radio" name="mode" value="IK3D"><span>IK 3D</span></label>
             </div>
           </section>
 
@@ -86,6 +87,18 @@
           </div>
 
           <div id="controlsDH" style="display:none">
+            <section class="panel-section" id="ik3DTargetPanel" style="display:none">
+              <div class="section-head">
+                <div class="section-title">3D Position Target</div>
+                <button class="text-button" id="reset3DTargetBtn" type="button">Reset</button>
+              </div>
+              <div class="field-grid-3">
+                <label class="field"><span>X</span><input type="number" id="xTarget3D" value="160"></label>
+                <label class="field"><span>Y</span><input type="number" id="yTarget3D" value="60"></label>
+                <label class="field"><span>Z</span><input type="number" id="zTarget3D" value="80"></label>
+              </div>
+              <div class="dh-note">Position only. Orientation is not constrained in this stage.</div>
+            </section>
             <section class="panel-section">
               <div class="section-head"><div class="section-title">Joints</div></div>
               <div class="joint-counter">
@@ -105,7 +118,7 @@
               </div>
               <div class="dh-note">theta = joint variable. d, a, alpha = fixed constants.</div>
             </section>
-            <section class="panel-section">
+            <section class="panel-section" id="dhJointAnglesPanel">
               <div class="section-title">Joint Angles</div>
               <div id="dhSliders"></div>
             </section>
@@ -140,14 +153,14 @@
 
         <aside class="results-panel">
           <section class="metric-grid">
-            <div class="metric"><span>End X</span><strong id="endX">0.0</strong></div>
-            <div class="metric"><span>End Y</span><strong id="endY">0.0</strong></div>
+            <div class="metric" id="endXMetric"><span>End X</span><strong id="endX">0.0</strong></div>
+            <div class="metric" id="endYMetric"><span>End Y</span><strong id="endY">0.0</strong></div>
             <div class="metric" id="endZMetric" style="display:none"><span>End Z</span><strong id="endZ">0.0</strong></div>
-            <div class="metric"><span>Error</span><strong id="errorMetric">0.0</strong></div>
-            <div class="metric"><span>Reach</span><strong id="reachMetric">0-0</strong></div>
+            <div class="metric"><span id="errorMetricLabel">Error</span><strong id="errorMetric">0.0</strong></div>
+            <div class="metric" id="reachMetricCard"><span>Reach</span><strong id="reachMetric">0-0</strong></div>
             <div class="metric" id="singularityMetric"><span>Singularity</span><strong id="singularityState">Stable</strong></div>
           </section>
-          <section class="joint-table">
+          <section class="joint-table" id="jointOutputCard">
             <div class="section-title">Joint Output</div>
             <div id="jointOutput"></div>
           </section>
@@ -190,6 +203,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js"></script>
+  <script src="./app.js?v=8"></script>
 </body>
 </html>

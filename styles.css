@@ -132,10 +132,11 @@ h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.7rem); line-height: 1.05; }
   box-shadow: 0 4px 16px rgba(24, 32, 43, 0.1);
 }
 
-/* 3-column mode selector for IK / FK / DH */
+/* Mode selector for IK 2D / FK / IK 3D / DH */
 .mode-seg {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
 }
+.mode-seg span { padding-inline: 3px; font-size: 0.78rem; }
 .link-count-seg { grid-template-columns: repeat(4, 1fr); }
 .link-count-seg span { padding-inline: 4px; font-size: 0.78rem; }
 

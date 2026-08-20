@@ -214,6 +214,45 @@ function dhJacobianMetrics(dhParams, fkResult) {
   return { J, sigmaMin, condition, rank, expectedRank, level };
 }
 
+function inverse3(M) {
+  const [a,b,c] = M[0], [d,e,f] = M[1], [g,h,i] = M[2];
+  const A=e*i-f*h, B=c*h-b*i, C=b*f-c*e;
+  const D=f*g-d*i, E=a*i-c*g, F=c*d-a*f;
+  const G=d*h-e*g, H=b*g-a*h, I=a*e-b*d;
+  const det = a*A + b*D + c*G;
+  if (Math.abs(det) < 1e-12) return null;
+  return [[A,B,C],[D,E,F],[G,H,I]].map(row => row.map(v => v / det));
+}
+
+// Position-only 3D IK using damped least squares:
+// dq = Jv^T (Jv Jv^T + lambda^2 I)^-1 error.
+function solveIK3D(target) {
+  const n = stateDH.jointCount;
+  if (stateDH.dh.every(d => Math.abs(d.theta) < 0.001)) {
+    const seed = [10,-20,25,15,-10,10,5];
+    stateDH.dh.forEach((d, idx) => { d.theta = seed[idx]; });
+  }
+  let error = Infinity, iterations = 0;
+  const lambda = 6;
+  for (; iterations < 160; iterations++) {
+    const res = fkDH(stateDH.dh);
+    const err = [target.x-res.x, target.y-res.y, target.z-res.z];
+    error = Math.hypot(...err);
+    if (error < 0.5) break;
+    const J = dhJacobianMetrics(stateDH.dh, res).J.slice(0, 3);
+    const B = Array.from({length:3}, (_, r) => Array.from({length:3}, (_, c) =>
+      J[r].reduce((sum, value, k) => sum + value * J[c][k], 0) + (r === c ? lambda * lambda : 0)));
+    const inv = inverse3(B);
+    if (!inv) break;
+    const y = inv.map(row => row.reduce((sum, value, k) => sum + value * err[k], 0));
+    for (let joint = 0; joint < n; joint++) {
+      const dq = J.reduce((sum, row, r) => sum + row[joint] * y[r], 0);
+      stateDH.dh[joint].theta = clamp(stateDH.dh[joint].theta + rad2deg(clamp(dq, -0.22, 0.22)), -180, 180);
+    }
+  }
+  return { error, iterations, converged: error < 1 };
+}
+
 // ══════════════════════════════════════
 //  2D Drawing
 // ══════════════════════════════════════
@@ -344,7 +383,7 @@ function buildDHSliders() {
 // ══════════════════════════════════════
 //  3D Scene (Three.js)
 // ══════════════════════════════════════
-let scene, camera, renderer, orbit;
+let scene, camera, renderer, orbit, targetMarker;
 let armGroup, gridHelper, axesHelper;
 const linkMeshes = [], jointMeshes = [], frameArrows = [];
 const THREE_COLORS = [0x1e293b, 0xdc2626, 0x0d9488, 0x7c3aed, 0x2563eb, 0xea580c, 0xdb2777];
@@ -437,6 +476,16 @@ function init3D() {
 
   armGroup = new THREE.Group();
   scene.add(armGroup);
+
+  targetMarker = new THREE.Group();
+  const targetSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(10, 18, 18),
+    new THREE.MeshBasicMaterial({ color: 0xf97316, wireframe: true })
+  );
+  targetMarker.add(targetSphere);
+  targetMarker.add(new THREE.AxesHelper(28));
+  targetMarker.visible = false;
+  scene.add(targetMarker);
 
   updateOrbitCamera();
 
@@ -537,22 +586,32 @@ let threeInit = false;
 function updateVisibility() {
   const m = mode();
   const isDH = m === 'DH';
+  const isIK3D = m === 'IK3D';
+  const is3D = isDH || isIK3D;
   const isIk = m === 'IK';
+  const isPositionIK = isIk || isIK3D;
   const count = linkCount();
   const isMulti = count > 2;
 
-  $('controlsStd').style.display = isDH ? 'none' : '';
-  $('controlsDH').style.display = isDH ? '' : 'none';
-  $('panel2D').style.display = isDH ? 'none' : '';
-  $('panel3D').style.display = isDH ? '' : 'none';
-  $('endZMetric').style.display = isDH ? '' : 'none';
-  $('dhMatrixCard').style.display = isDH ? '' : 'none';
-  $('dhJacobianCard').style.display = isDH ? '' : 'none';
-  $('singularityMetric').style.display = isDH ? 'none' : '';
-  $('singularityCard').style.display = isDH ? 'none' : '';
+  $('controlsStd').style.display = is3D ? 'none' : '';
+  $('controlsDH').style.display = is3D ? '' : 'none';
+  $('ik3DTargetPanel').style.display = isIK3D ? '' : 'none';
+  $('dhJointAnglesPanel').style.display = isDH ? '' : 'none';
+  $('panel2D').style.display = is3D ? 'none' : '';
+  $('panel3D').style.display = is3D ? '' : 'none';
+  $('endXMetric').style.display = isPositionIK ? 'none' : '';
+  $('endYMetric').style.display = isPositionIK ? 'none' : '';
+  $('endZMetric').style.display = is3D && !isIK3D ? '' : 'none';
+  $('reachMetricCard').style.display = isPositionIK ? 'none' : '';
+  $('errorMetricLabel').textContent = isPositionIK ? 'Position Error' : 'Error';
+  $('jointOutputCard').style.display = isDH ? 'none' : '';
+  $('dhMatrixCard').style.display = is3D ? '' : 'none';
+  $('dhJacobianCard').style.display = is3D ? '' : 'none';
+  $('singularityMetric').style.display = is3D || isIk ? 'none' : '';
+  $('singularityCard').style.display = is3D || isIk ? 'none' : '';
 
   $('ikPanel').classList.toggle('hidden', !isIk);
-  $('fkPanel').classList.toggle('hidden', isIk || isDH);
+  $('fkPanel').classList.toggle('hidden', isIk || is3D);
   for (let i = 3; i <= STD_JOINT_MAX; i++) {
     $(`L${i}Field`).classList.toggle('hidden', count < i);
     $(`theta${i}Field`).classList.toggle('hidden', count < i);
@@ -560,10 +619,14 @@ function updateVisibility() {
   $('elbowPanel').classList.toggle('hidden', !isIk || isMulti);
   $('ccdHint').classList.toggle('hidden', !isIk || !isMulti);
 
-  if (isDH) {
-    $('dhModeLabel').textContent = 'DH Forward Kinematics';
-    $('dhSolverLabel').textContent = `${stateDH.jointCount}-joint DH chain — Drag to rotate, scroll to zoom`;
-    $('solverNote').textContent = 'Forward kinematics using DH convention (3D)';
+  if (is3D) {
+    $('dhModeLabel').textContent = isIK3D ? '3D Position Inverse Kinematics' : 'DH Forward Kinematics';
+    $('dhSolverLabel').textContent = isIK3D
+      ? `${stateDH.jointCount}-joint Damped Least Squares — Drag to rotate, scroll to zoom`
+      : `${stateDH.jointCount}-joint DH chain — Drag to rotate, scroll to zoom`;
+    $('solverNote').textContent = isIK3D
+      ? 'Damped Least Squares position IK (orientation unconstrained)'
+      : 'Forward kinematics using DH convention (3D)';
   } else {
     $('modeLabel').textContent = isIk ? 'Inverse Kinematics' : 'Forward Kinematics';
     $('solverLabel').textContent = isIk ? (isMulti ? `CCD ${count}-link` : 'Analytic 2-link') : `${count}-link joint angle solve`;
@@ -575,8 +638,16 @@ function update() {
   updateVisibility();
   const m = mode();
 
-  if (m === 'DH') {
+  if (m === 'DH' || m === 'IK3D') {
     if (!threeInit) { init3D(); threeInit = true; buildArm3D(); }
+    let ikResult = null;
+    if (m === 'IK3D') {
+      const target = { x:numVal('xTarget3D'), y:numVal('yTarget3D'), z:numVal('zTarget3D') };
+      ikResult = solveIK3D(target);
+      syncDHTable();
+      targetMarker.visible = true;
+      targetMarker.position.set(target.x, target.z, -target.y);
+    } else if (targetMarker) targetMarker.visible = false;
     const res = updateArm3D();
     const n = stateDH.jointCount;
 
@@ -588,7 +659,7 @@ function update() {
     $('endX').textContent = res.x.toFixed(1);
     $('endY').textContent = res.y.toFixed(1);
     $('endZ').textContent = res.z.toFixed(1);
-    $('errorMetric').textContent = '0.0';
+    $('errorMetric').textContent = ikResult ? ikResult.error.toFixed(2) : '0.0';
     const maxR = stateDH.dh.reduce((s,d) => s + Math.abs(d.a) + Math.abs(d.d), 0);
     $('reachMetric').textContent = `0-${maxR.toFixed(0)}`;
 
@@ -619,7 +690,8 @@ function update() {
       : jac.level === 'near'
         ? 'The chain is close to losing an instantaneous motion direction.'
         : 'The chain has lost an instantaneous motion direction at this configuration.';
-    setStatus('Ready');
+    if (ikResult && !ikResult.converged) setStatus('Approximate 3D IK solution', 'warning');
+    else setStatus('Ready');
     return;
   }
 
@@ -689,17 +761,18 @@ function init() {
 
   [...document.getElementsByName('mode')].forEach(el => el.addEventListener('change', () => {
     const m = mode();
-    if (m === 'DH') { buildDHTable(); buildDHSliders(); buildJointOutput(stateDH.jointCount); }
+    if (m === 'DH' || m === 'IK3D') { buildDHTable(); buildDHSliders(); buildJointOutput(stateDH.jointCount); }
     else buildJointOutput(linkCount());
     update();
   }));
 
   [...document.getElementsByName('linkCount')].forEach(el => el.addEventListener('change', () => {
-    if (mode() !== 'DH') { buildJointOutput(linkCount()); update(); }
+    if (mode() !== 'DH' && mode() !== 'IK3D') { buildJointOutput(linkCount()); update(); }
   }));
 
   ['elbow'].forEach(n => [...document.getElementsByName(n)].forEach(el => el.addEventListener('change', update)));
   [...Array.from({ length: STD_JOINT_MAX }, (_, i) => `L${i + 1}`), 'xTarget', 'yTarget', 'showReach'].forEach(id => $(id).addEventListener('input', update));
+  ['xTarget3D', 'yTarget3D', 'zTarget3D'].forEach(id => $(id).addEventListener('input', update));
   Array.from({ length: STD_JOINT_MAX }, (_, i) => `theta${i + 1}`).forEach(base => {
     $(`${base}Range`).addEventListener('input', e => { $(`${base}In`).value = e.target.value; update(); });
     $(`${base}In`).addEventListener('input', e => { $(`${base}Range`).value = e.target.value; update(); });
@@ -730,6 +803,11 @@ function init() {
   });
 
   $('centerTargetBtn').addEventListener('click', () => { $('xTarget').value=0; $('yTarget').value=0; update(); });
+  $('reset3DTargetBtn').addEventListener('click', () => {
+    $('xTarget3D').value=160; $('yTarget3D').value=60; $('zTarget3D').value=80;
+    stateDH.dh.forEach((d, i) => { d.theta = [10,-20,25,15,-10,10,5][i] || 0; });
+    update();
+  });
 
   // Canvas drag for IK target
   canvas.addEventListener('pointerdown', e => {
