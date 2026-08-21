@@ -608,7 +608,7 @@ function updateVisibility() {
   $('endZMetric').style.display = is3D && !isIK3D ? '' : 'none';
   $('reachMetricCard').style.display = isPositionIK ? 'none' : '';
   $('errorMetricLabel').textContent = isPositionIK ? 'Position Error' : 'Error';
-  $('jointOutputCard').style.display = isDH ? 'none' : '';
+  $('jointOutputCard').style.display = isPositionIK ? '' : 'none';
   $('dhMatrixCard').style.display = is3D ? '' : 'none';
   $('dhJacobianCard').style.display = is3D ? '' : 'none';
   $('singularityMetric').style.display = is3D || isIk ? 'none' : '';
@@ -853,7 +853,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v19',
+    appVersion: 'v20',
     viewImage: captureViewImage(),
     ...data,
   };
