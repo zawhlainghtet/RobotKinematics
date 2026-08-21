@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=17">
+  <link rel="stylesheet" href="./styles.css?v=18">
 </head>
 <body>
   <main class="app-shell">
@@ -92,9 +92,9 @@
                 <div class="section-title">3D Position Target</div>
               </div>
               <div class="field-grid-3">
-                <label class="field"><span>X</span><input type="number" id="xTarget3D" value="160"></label>
-                <label class="field"><span>Y</span><input type="number" id="yTarget3D" value="60"></label>
-                <label class="field"><span>Z</span><input type="number" id="zTarget3D" value="80"></label>
+                <label class="field axis-field axis-x"><span>X</span><input type="number" id="xTarget3D" value="160"></label>
+                <label class="field axis-field axis-y"><span>Y</span><input type="number" id="yTarget3D" value="60"></label>
+                <label class="field axis-field axis-z"><span>Z</span><input type="number" id="zTarget3D" value="80"></label>
               </div>
               <div class="dh-note">Position only. Orientation is not constrained in this stage.</div>
             </section>
@@ -212,6 +212,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=17"></script>
+  <script src="./app.js?v=18"></script>
 </body>
 </html>

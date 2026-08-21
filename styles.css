@@ -164,6 +164,39 @@ h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.7rem); line-height: 1.05; }
   background: #fbfdff;
   color: var(--ink);
 }
+.axis-field {
+  --axis-color: var(--ink);
+  --axis-border: var(--line);
+  --axis-bg: #fbfdff;
+  --axis-focus: rgba(24, 32, 43, 0.14);
+  color: var(--axis-color);
+}
+.axis-field span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.axis-field span::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--axis-color);
+}
+.axis-field input {
+  border-color: var(--axis-border);
+  background: var(--axis-bg);
+  color: var(--axis-color);
+  font-weight: 800;
+}
+.axis-field input:focus {
+  outline: none;
+  border-color: var(--axis-color);
+  box-shadow: 0 0 0 2px var(--axis-focus);
+}
+.axis-x { --axis-color: #df3f3f; --axis-border: #efb3b3; --axis-bg: #fff7f7; --axis-focus: rgba(223, 63, 63, 0.18); }
+.axis-y { --axis-color: #0f9f8f; --axis-border: #9bd9d1; --axis-bg: #f2fffd; --axis-focus: rgba(15, 159, 143, 0.18); }
+.axis-z { --axis-color: #2563eb; --axis-border: #a9c4ff; --axis-bg: #f4f8ff; --axis-focus: rgba(37, 99, 235, 0.18); }
 
 .radio-stack { display: grid; gap: 8px; margin-top: 12px; color: var(--muted); }
 

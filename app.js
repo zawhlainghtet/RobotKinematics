@@ -850,7 +850,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v17',
+    appVersion: 'v18',
     viewImage: captureViewImage(),
     ...data,
   };
