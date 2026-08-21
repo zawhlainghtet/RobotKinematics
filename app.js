@@ -844,7 +844,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v13',
+    appVersion: 'v14',
     viewImage: captureViewImage(),
     ...data,
   };
@@ -1054,9 +1054,9 @@ function init() {
     syncDHTable(); buildDHSliders(); update();
   }));
 
-  $('exportImageBtn').addEventListener('click', exportImageReport);
-  $('exportJsonBtn').addEventListener('click', exportJsonReport);
-  $('printReportBtn').addEventListener('click', printReport);
+  document.querySelectorAll('[data-export="png"]').forEach(btn => btn.addEventListener('click', exportImageReport));
+  document.querySelectorAll('[data-export="json"]').forEach(btn => btn.addEventListener('click', exportJsonReport));
+  document.querySelectorAll('[data-export="pdf"]').forEach(btn => btn.addEventListener('click', printReport));
 
   update();
 }

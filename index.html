@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=13">
+  <link rel="stylesheet" href="./styles.css?v=14">
 </head>
 <body>
   <main class="app-shell">
@@ -14,22 +14,9 @@
           <p class="eyebrow">Kinematics Lab</p>
           <h1>Robot Arm Simulator</h1>
         </div>
-        <div class="topbar-actions">
-          <div class="status-card" id="reachStatus">
-            <span class="status-dot"></span>
-            <span id="statusText">Ready</span>
-          </div>
-          <div class="report-card top-report-card">
-            <div class="section-head">
-              <div class="section-title">Export Report</div>
-              <span class="unit-label">v13</span>
-            </div>
-            <div class="report-actions">
-              <button type="button" id="exportImageBtn">PNG</button>
-              <button type="button" id="exportJsonBtn">JSON</button>
-              <button type="button" id="printReportBtn">Print / PDF</button>
-            </div>
-          </div>
+        <div class="status-card" id="reachStatus">
+          <span class="status-dot"></span>
+          <span id="statusText">Ready</span>
         </div>
       </header>
 
@@ -150,7 +137,14 @@
         <section class="canvas-panel" id="panel2D">
           <div class="canvas-toolbar">
             <div><strong id="modeLabel">Inverse Kinematics</strong><span id="solverLabel">Analytic 2-link</span></div>
-            <label class="toggle"><input type="checkbox" id="showReach" checked><span>Reach zone</span></label>
+            <div class="toolbar-actions">
+              <label class="toggle"><input type="checkbox" id="showReach" checked><span>Reach zone</span></label>
+              <div class="report-actions toolbar-report-actions" aria-label="Export report">
+                <button type="button" data-export="png">PNG</button>
+                <button type="button" data-export="json">JSON</button>
+                <button type="button" data-export="pdf">PDF</button>
+              </div>
+            </div>
           </div>
           <div class="canvas-wrap">
             <canvas id="canvasArea" width="720" height="720"></canvas>
@@ -160,6 +154,11 @@
         <section class="canvas-panel" id="panel3D" style="display:none">
           <div class="canvas-toolbar">
             <div><strong id="dhModeLabel">DH Forward Kinematics</strong><span id="dhSolverLabel">Drag to rotate, scroll to zoom</span></div>
+            <div class="report-actions toolbar-report-actions" aria-label="Export report">
+              <button type="button" data-export="png">PNG</button>
+              <button type="button" data-export="json">JSON</button>
+              <button type="button" data-export="pdf">PDF</button>
+            </div>
           </div>
           <div id="threeContainer" class="three-container"></div>
         </section>
@@ -216,6 +215,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=13"></script>
+  <script src="./app.js?v=14"></script>
 </body>
 </html>

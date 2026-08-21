@@ -75,21 +75,6 @@ h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.7rem); line-height: 1.05; }
 .status-dot { width: 9px; height: 9px; border-radius: 99px; background: var(--teal); }
 .status-card.warning .status-dot { background: var(--amber); }
 .status-card.error .status-dot { background: var(--red); }
-.topbar-actions {
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.top-report-card {
-  width: min(360px, 100%);
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel);
-  box-shadow: 0 6px 20px rgba(24, 32, 43, 0.06);
-}
 
 .sim-layout {
   display: grid;
@@ -268,6 +253,13 @@ input[type="range"] { width: 100%; accent-color: var(--blue); }
   font-weight: 700;
   white-space: nowrap;
 }
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
 .canvas-wrap { padding: 14px; }
 canvas {
@@ -399,7 +391,6 @@ canvas {
 .jacobian-table th:last-child, .jacobian-table td:last-child { border-right: 0; }
 .jacobian-table tbody tr:last-child th, .jacobian-table tbody tr:last-child td { border-bottom: 0; }
 
-.report-card .section-title { margin-bottom: 0; }
 .report-actions {
   display: grid;
   grid-template-columns: 0.85fr 0.9fr 1.35fr;
@@ -409,6 +400,15 @@ canvas {
 .report-actions button {
   min-width: 0;
   font-weight: 800;
+}
+.toolbar-report-actions {
+  width: 220px;
+  margin-top: 0;
+}
+.toolbar-report-actions button {
+  min-height: 34px;
+  font-size: 0.86rem;
+  padding: 0 8px;
 }
 
 .hidden { display: none !important; }
@@ -421,12 +421,13 @@ canvas {
   .app-shell { padding: 12px; }
   .topbar, .sim-layout { display: grid; grid-template-columns: 1fr; }
   .status-card { width: fit-content; }
-  .topbar-actions {
-    justify-content: stretch;
-  }
-  .top-report-card {
-    width: 100%;
-  }
   .control-panel, .results-panel { padding: 12px; }
   .field-grid, .metric-grid { grid-template-columns: 1fr; }
+  .canvas-toolbar {
+    align-items: stretch;
+  }
+  .toolbar-actions,
+  .toolbar-report-actions {
+    width: 100%;
+  }
 }
