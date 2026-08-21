@@ -195,8 +195,8 @@ h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.7rem); line-height: 1.05; }
   box-shadow: 0 0 0 2px var(--axis-focus);
 }
 .axis-x { --axis-color: #df3f3f; --axis-border: #efb3b3; --axis-bg: #fff7f7; --axis-focus: rgba(223, 63, 63, 0.18); }
-.axis-y { --axis-color: #0f9f8f; --axis-border: #9bd9d1; --axis-bg: #f2fffd; --axis-focus: rgba(15, 159, 143, 0.18); }
-.axis-z { --axis-color: #2563eb; --axis-border: #a9c4ff; --axis-bg: #f4f8ff; --axis-focus: rgba(37, 99, 235, 0.18); }
+.axis-y { --axis-color: #2563eb; --axis-border: #a9c4ff; --axis-bg: #f4f8ff; --axis-focus: rgba(37, 99, 235, 0.18); }
+.axis-z { --axis-color: #0f9f8f; --axis-border: #9bd9d1; --axis-bg: #f2fffd; --axis-focus: rgba(15, 159, 143, 0.18); }
 
 .radio-stack { display: grid; gap: 8px; margin-top: 12px; color: var(--muted); }
 
@@ -354,8 +354,8 @@ canvas {
 }
 .axis-metric strong { color: var(--axis-color); }
 .axis-metric.axis-x { --axis-color: #df3f3f; --axis-border: #efb3b3; --axis-bg: #fff7f7; }
-.axis-metric.axis-y { --axis-color: #0f9f8f; --axis-border: #9bd9d1; --axis-bg: #f2fffd; }
-.axis-metric.axis-z { --axis-color: #2563eb; --axis-border: #a9c4ff; --axis-bg: #f4f8ff; }
+.axis-metric.axis-y { --axis-color: #2563eb; --axis-border: #a9c4ff; --axis-bg: #f4f8ff; }
+.axis-metric.axis-z { --axis-color: #0f9f8f; --axis-border: #9bd9d1; --axis-bg: #f2fffd; }
 .hidden-metric { display: none !important; }
 .singularity-card .section-title { margin-bottom: 0; }
 .singularity-badge {
