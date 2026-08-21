@@ -746,6 +746,168 @@ function update() {
 }
 
 // ══════════════════════════════════════
+//  Report Export
+// ══════════════════════════════════════
+function fmt(v, digits = 3) {
+  return Number.isFinite(v) ? Number(v).toFixed(digits) : 'Infinity';
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[ch]));
+}
+
+function downloadFile(name, type, content) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function current2DReport() {
+  const m = mode();
+  const lv = links();
+  const target = m === 'IK' ? { x: numVal('xTarget'), y: numVal('yTarget') } : null;
+  const anglesRad = m === 'IK'
+    ? state.lastThetas.slice(0, lv.length)
+    : Array.from({ length: lv.length }, (_, i) => deg2rad(numVal(`theta${i + 1}In`)));
+  const fkResult = fk(lv, anglesRad);
+  const end = fkResult.joints[fkResult.joints.length - 1];
+  const jac = jacobianMetrics(lv, anglesRad);
+  const maxReach = lv.reduce((sum, value) => sum + value, 0);
+  const minReach = Math.max(0, Math.max(...lv) - (maxReach - Math.max(...lv)));
+  return {
+    family: '2D planar arm',
+    mode: m === 'IK' ? 'IK 2D' : 'FK 2D',
+    solver: $('solverNote').textContent,
+    linkLengths: lv,
+    jointAnglesDeg: anglesRad.map(rad2deg),
+    target,
+    endEffector: { x: end.x, y: end.y },
+    positionError: target ? Math.hypot(end.x - target.x, end.y - target.y) : 0,
+    reachRange: { min: minReach, max: maxReach },
+    jacobianCondition: {
+      level: jac.level,
+      sigmaMin: jac.sigmaMin,
+      sigmaMax: jac.sigmaMax,
+      condition: jac.condition,
+    },
+  };
+}
+
+function current3DReport() {
+  const m = mode();
+  const target = m === 'IK3D'
+    ? { x: numVal('xTarget3D'), y: numVal('yTarget3D'), z: numVal('zTarget3D') }
+    : null;
+  const fkResult = fkDH(stateDH.dh);
+  const jac = dhJacobianMetrics(stateDH.dh, fkResult);
+  return {
+    family: 'Standard DH spatial arm',
+    mode: m === 'IK3D' ? 'IK 3D' : 'DH',
+    solver: $('solverNote').textContent,
+    jointCount: stateDH.jointCount,
+    dhParameters: stateDH.dh.map((row, i) => ({ joint: i + 1, ...row })),
+    target,
+    endEffector: { x: fkResult.x, y: fkResult.y, z: fkResult.z },
+    positionError: target ? Math.hypot(fkResult.x - target.x, fkResult.y - target.y, fkResult.z - target.z) : 0,
+    transform: fkResult.matrices[fkResult.matrices.length - 1],
+    jacobian: jac.J,
+    jacobianCondition: {
+      level: jac.level,
+      rank: jac.rank,
+      expectedRank: jac.expectedRank,
+      sigmaMin: jac.sigmaMin,
+      condition: jac.condition,
+    },
+  };
+}
+
+function buildReportData() {
+  update();
+  const data = mode() === 'DH' || mode() === 'IK3D' ? current3DReport() : current2DReport();
+  return {
+    title: 'Robot Arm Simulator Report',
+    generatedAt: new Date().toISOString(),
+    status: $('statusText').textContent,
+    appVersion: 'v9',
+    ...data,
+  };
+}
+
+function renderMatrixRows(matrix) {
+  if (!matrix) return '';
+  return matrix.map(row => `<tr>${row.map(v => `<td>${fmt(v, 4)}</td>`).join('')}</tr>`).join('');
+}
+
+function renderReportHtml(report) {
+  const is3D = report.family.includes('spatial');
+  const angles = report.jointAnglesDeg || report.dhParameters.map(row => row.theta);
+  const target = report.target
+    ? Object.entries(report.target).map(([k, v]) => `${k.toUpperCase()}: ${fmt(v, 2)}`).join(', ')
+    : 'None';
+  const end = Object.entries(report.endEffector).map(([k, v]) => `${k.toUpperCase()}: ${fmt(v, 2)}`).join(', ');
+  const dhRows = report.dhParameters ? report.dhParameters.map(row =>
+    `<tr><td>${row.joint}</td><td>${fmt(row.theta, 2)}</td><td>${fmt(row.d, 2)}</td><td>${fmt(row.a, 2)}</td><td>${fmt(row.alpha, 2)}</td></tr>`
+  ).join('') : '';
+
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(report.title)}</title>
+    <style>
+      body{font-family:Inter,Arial,sans-serif;margin:32px;color:#18202b;line-height:1.45}
+      h1{margin:0 0 6px;font-size:28px} h2{margin:24px 0 10px;font-size:16px}
+      .meta{color:#667080;margin-bottom:20px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .box{border:1px solid #dbe3ec;border-radius:8px;padding:12px;background:#fbfdff}
+      .label{display:block;color:#667080;font-size:12px;font-weight:700;text-transform:uppercase}
+      table{width:100%;border-collapse:collapse;margin-top:8px;font-size:13px}th,td{border:1px solid #dbe3ec;padding:7px;text-align:right}
+      th{background:#eef3f8;color:#2563eb}.left{text-align:left}@media print{body{margin:18mm}.no-print{display:none}}
+    </style></head><body>
+      <button class="no-print" onclick="window.print()">Print / Save PDF</button>
+      <h1>${escapeHtml(report.title)}</h1>
+      <div class="meta">${escapeHtml(report.generatedAt)} · ${escapeHtml(report.appVersion)}</div>
+      <div class="grid">
+        <div class="box"><span class="label">Mode</span>${escapeHtml(report.mode)}</div>
+        <div class="box"><span class="label">Solver</span>${escapeHtml(report.solver)}</div>
+        <div class="box"><span class="label">Status</span>${escapeHtml(report.status)}</div>
+        <div class="box"><span class="label">Target</span>${escapeHtml(target)}</div>
+        <div class="box"><span class="label">End Effector</span>${escapeHtml(end)}</div>
+        <div class="box"><span class="label">Position Error</span>${fmt(report.positionError, 3)}</div>
+      </div>
+      <h2>Joint Angles</h2>
+      <table><thead><tr>${angles.map((_, i) => `<th>J${i + 1}</th>`).join('')}</tr></thead><tbody><tr>${angles.map(v => `<td>${fmt(v, 2)} deg</td>`).join('')}</tr></tbody></table>
+      ${is3D ? `<h2>DH Parameters</h2><table><thead><tr><th>Joint</th><th>Theta</th><th>d</th><th>a</th><th>Alpha</th></tr></thead><tbody>${dhRows}</tbody></table>` : `<h2>Link Lengths</h2><table><tbody><tr>${report.linkLengths.map((v, i) => `<th>L${i + 1}</th>`).join('')}</tr><tr>${report.linkLengths.map(v => `<td>${fmt(v, 1)}</td>`).join('')}</tr></tbody></table>`}
+      ${is3D ? `<h2>End-Effector Transform</h2><table><tbody>${renderMatrixRows(report.transform)}</tbody></table>` : ''}
+      <h2>Jacobian Condition</h2>
+      <table><tbody>${Object.entries(report.jacobianCondition).map(([k, v]) => `<tr><th class="left">${escapeHtml(k)}</th><td>${escapeHtml(Number.isFinite(v) ? fmt(v, 4) : v)}</td></tr>`).join('')}</tbody></table>
+    </body></html>`;
+}
+
+function exportJsonReport() {
+  const report = buildReportData();
+  const stamp = report.generatedAt.replace(/[:.]/g, '-');
+  downloadFile(`robot-kinematics-report-${stamp}.json`, 'application/json', JSON.stringify(report, null, 2));
+}
+
+function printReport() {
+  const report = buildReportData();
+  const win = window.open('', '_blank');
+  if (!win) {
+    const stamp = report.generatedAt.replace(/[:.]/g, '-');
+    downloadFile(`robot-kinematics-report-${stamp}.html`, 'text/html', renderReportHtml(report));
+    return;
+  }
+  win.document.write(renderReportHtml(report));
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 250);
+}
+
+// ══════════════════════════════════════
 //  Events
 // ══════════════════════════════════════
 function canvasToWorld(e) {
@@ -858,6 +1020,9 @@ function init() {
     if (n === 'fold') stateDH.dh.forEach((d,i) => d.theta = [90,-120,80,-30,45,0][i]||0);
     syncDHTable(); buildDHSliders(); update();
   }));
+
+  $('exportJsonBtn').addEventListener('click', exportJsonReport);
+  $('printReportBtn').addEventListener('click', printReport);
 
   update();
 }

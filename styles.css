@@ -384,6 +384,18 @@ canvas {
 .jacobian-table th:last-child, .jacobian-table td:last-child { border-right: 0; }
 .jacobian-table tbody tr:last-child th, .jacobian-table tbody tr:last-child td { border-bottom: 0; }
 
+.report-card .section-title { margin-bottom: 0; }
+.report-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+.report-actions button {
+  min-width: 0;
+  font-weight: 800;
+}
+
 .hidden { display: none !important; }
 
 @media (max-width: 1100px) {
