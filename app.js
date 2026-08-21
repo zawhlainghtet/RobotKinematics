@@ -332,6 +332,10 @@ function buildJointOutput(count) {
     r.innerHTML = `<span>theta ${i+1}</span><strong id="thOut${i}">0.0 deg</strong>`;
     c.appendChild(r);
   }
+  const errRow = document.createElement('div');
+  errRow.className = 'joint-row position-error-row';
+  errRow.innerHTML = `<span>Position Error</span><strong id="jointPositionError">0.00</strong>`;
+  c.appendChild(errRow);
 }
 
 function syncSlider(id, v) { $(`${id}In`).value = v; $(`${id}Range`).value = v; }
@@ -660,6 +664,7 @@ function update() {
     $('endY').textContent = res.y.toFixed(1);
     $('endZ').textContent = res.z.toFixed(1);
     $('errorMetric').textContent = ikResult ? ikResult.error.toFixed(2) : '0.0';
+    if ($('jointPositionError')) $('jointPositionError').textContent = ikResult ? ikResult.error.toFixed(2) : '0.00';
     const maxR = stateDH.dh.reduce((s,d) => s + Math.abs(d.a) + Math.abs(d.d), 0);
     $('reachMetric').textContent = `0-${maxR.toFixed(0)}`;
 
@@ -728,6 +733,7 @@ function update() {
   $('endX').textContent = end.x.toFixed(1);
   $('endY').textContent = end.y.toFixed(1);
   $('errorMetric').textContent = err.toFixed(1);
+  if ($('jointPositionError')) $('jointPositionError').textContent = err.toFixed(2);
   const mx = lv.reduce((s,v)=>s+v,0);
   const mn = Math.max(0, Math.max(...lv) - (mx - Math.max(...lv)));
   $('reachMetric').textContent = `${mn.toFixed(0)}-${mx.toFixed(0)}`;
@@ -844,7 +850,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v14',
+    appVersion: 'v15',
     viewImage: captureViewImage(),
     ...data,
   };
