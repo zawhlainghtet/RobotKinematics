@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=9">
+  <link rel="stylesheet" href="./styles.css?v=11">
 </head>
 <body>
   <main class="app-shell">
@@ -14,9 +14,21 @@
           <p class="eyebrow">Kinematics Lab</p>
           <h1>Robot Arm Simulator</h1>
         </div>
-        <div class="status-card" id="reachStatus">
-          <span class="status-dot"></span>
-          <span id="statusText">Ready</span>
+        <div class="topbar-actions">
+          <div class="status-card" id="reachStatus">
+            <span class="status-dot"></span>
+            <span id="statusText">Ready</span>
+          </div>
+          <div class="report-card top-report-card">
+            <div class="section-head">
+              <div class="section-title">Export Report</div>
+              <span class="unit-label">v11</span>
+            </div>
+            <div class="report-actions">
+              <button type="button" id="exportJsonBtn">JSON</button>
+              <button type="button" id="printReportBtn">Print / PDF</button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -197,22 +209,12 @@
             <div class="section-title">Solver</div>
             <p id="solverNote">Analytic inverse kinematics</p>
           </section>
-          <section class="mini-card report-card">
-            <div class="section-head">
-              <div class="section-title">Export Report</div>
-              <span class="unit-label">v9</span>
-            </div>
-            <div class="report-actions">
-              <button type="button" id="exportJsonBtn">JSON</button>
-              <button type="button" id="printReportBtn">Print / PDF</button>
-            </div>
-          </section>
         </aside>
       </div>
     </section>
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=9"></script>
+  <script src="./app.js?v=11"></script>
 </body>
 </html>

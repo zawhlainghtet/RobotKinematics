@@ -75,6 +75,21 @@ h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.7rem); line-height: 1.05; }
 .status-dot { width: 9px; height: 9px; border-radius: 99px; background: var(--teal); }
 .status-card.warning .status-dot { background: var(--amber); }
 .status-card.error .status-dot { background: var(--red); }
+.topbar-actions {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.top-report-card {
+  width: min(268px, 100%);
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 6px 20px rgba(24, 32, 43, 0.06);
+}
 
 .sim-layout {
   display: grid;
@@ -406,6 +421,12 @@ canvas {
   .app-shell { padding: 12px; }
   .topbar, .sim-layout { display: grid; grid-template-columns: 1fr; }
   .status-card { width: fit-content; }
+  .topbar-actions {
+    justify-content: stretch;
+  }
+  .top-report-card {
+    width: 100%;
+  }
   .control-panel, .results-panel { padding: 12px; }
   .field-grid, .metric-grid { grid-template-columns: 1fr; }
 }
