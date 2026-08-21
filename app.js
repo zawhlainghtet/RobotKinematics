@@ -329,7 +329,7 @@ function buildJointOutput(count) {
   const c = $('jointOutput'); c.innerHTML = '';
   for (let i = 0; i < count; i++) {
     const r = document.createElement('div'); r.className = 'joint-row';
-    r.innerHTML = `<span>theta ${i+1}</span><strong id="thOut${i}">0.0 deg</strong>`;
+    r.innerHTML = `<span>&theta;${i+1}</span><strong id="thOut${i}">0.00 deg</strong>`;
     c.appendChild(r);
   }
   const errRow = document.createElement('div');
@@ -349,10 +349,10 @@ function buildDHTable() {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="dh-label">${i+1}</td>
-      <td class="dh-cell joint-var"><input type="number" data-i="${i}" data-p="theta" value="${dh.theta}" step="5"></td>
-      <td class="dh-cell"><input type="number" data-i="${i}" data-p="d" value="${dh.d}" step="10"></td>
-      <td class="dh-cell"><input type="number" data-i="${i}" data-p="a" value="${dh.a}" step="10"></td>
-      <td class="dh-cell"><input type="number" data-i="${i}" data-p="alpha" value="${dh.alpha}" step="5"></td>`;
+      <td class="dh-cell joint-var"><input type="number" data-i="${i}" data-p="theta" value="${fmt2(dh.theta)}" step="0.01"></td>
+      <td class="dh-cell"><input type="number" data-i="${i}" data-p="d" value="${fmt2(dh.d)}" step="0.01"></td>
+      <td class="dh-cell"><input type="number" data-i="${i}" data-p="a" value="${fmt2(dh.a)}" step="0.01"></td>
+      <td class="dh-cell"><input type="number" data-i="${i}" data-p="alpha" value="${fmt2(dh.alpha)}" step="0.01"></td>`;
     tb.appendChild(tr);
   });
   tb.querySelectorAll('input').forEach(inp => inp.addEventListener('input', e => {
@@ -366,7 +366,7 @@ function buildDHTable() {
 function syncDHTable() {
   $('dhBody').querySelectorAll('input').forEach(inp => {
     const i = +inp.dataset.i, p = inp.dataset.p;
-    inp.value = p === 'theta' ? stateDH.dh[i].theta : stateDH.dh[i][p];
+    inp.value = fmt2(p === 'theta' ? stateDH.dh[i].theta : stateDH.dh[i][p]);
   });
 }
 
@@ -374,13 +374,13 @@ function buildDHSliders() {
   const c = $('dhSliders'); c.innerHTML = '';
   for (let i = 0; i < stateDH.jointCount; i++) {
     const d = document.createElement('div'); d.className = 'slider-field';
-    d.innerHTML = `<label>theta ${i+1}</label>
-      <input type="range" id="dhR${i}" min="-180" max="180" value="${stateDH.dh[i].theta}">
-      <input type="number" id="dhN${i}" value="${stateDH.dh[i].theta}">`;
+    d.innerHTML = `<label>&theta;${i+1}</label>
+      <input type="range" id="dhR${i}" min="-180" max="180" step="0.01" value="${fmt2(stateDH.dh[i].theta)}">
+      <input type="number" id="dhN${i}" step="0.01" value="${fmt2(stateDH.dh[i].theta)}">`;
     c.appendChild(d);
     const rng = d.querySelector(`#dhR${i}`), num = d.querySelector(`#dhN${i}`);
-    rng.addEventListener('input', e => { stateDH.dh[i].theta = +e.target.value; num.value = stateDH.dh[i].theta; syncDHTable(); update(); });
-    num.addEventListener('input', e => { stateDH.dh[i].theta = +e.target.value || 0; rng.value = clamp(stateDH.dh[i].theta,-180,180); syncDHTable(); update(); });
+    rng.addEventListener('input', e => { stateDH.dh[i].theta = +e.target.value; num.value = fmt2(stateDH.dh[i].theta); syncDHTable(); update(); });
+    num.addEventListener('input', e => { stateDH.dh[i].theta = +e.target.value || 0; rng.value = fmt2(clamp(stateDH.dh[i].theta,-180,180)); syncDHTable(); update(); });
   }
 }
 
@@ -657,12 +657,12 @@ function update() {
 
     for (let i = 0; i < n; i++) {
       const el = $(`thOut${i}`);
-      if (el) el.textContent = `${stateDH.dh[i].theta.toFixed(1)} deg`;
+      if (el) el.textContent = `${stateDH.dh[i].theta.toFixed(2)} deg`;
     }
 
-    $('endX').textContent = res.x.toFixed(1);
-    $('endY').textContent = res.y.toFixed(1);
-    $('endZ').textContent = res.z.toFixed(1);
+    $('endX').textContent = res.x.toFixed(2);
+    $('endY').textContent = res.y.toFixed(2);
+    $('endZ').textContent = res.z.toFixed(2);
     $('errorMetric').textContent = ikResult ? ikResult.error.toFixed(2) : '0.0';
     if ($('jointPositionError')) $('jointPositionError').textContent = ikResult ? ikResult.error.toFixed(2) : '0.00';
     const maxR = stateDH.dh.reduce((s,d) => s + Math.abs(d.a) + Math.abs(d.d), 0);
@@ -740,7 +740,7 @@ function update() {
 
   for (let i = 0; i < lv.length; i++) {
     const el = $(`thOut${i}`);
-    if (el) el.textContent = `${rad2deg(th[i]||0).toFixed(1)} deg`;
+    if (el) el.textContent = `${rad2deg(th[i]||0).toFixed(2)} deg`;
   }
 
   const singularity = updateSingularity(lv, th);
@@ -756,6 +756,9 @@ function update() {
 // ══════════════════════════════════════
 function fmt(v, digits = 3) {
   return Number.isFinite(v) ? Number(v).toFixed(digits) : 'Infinity';
+}
+function fmt2(v) {
+  return fmt(Number(v), 2);
 }
 
 function escapeHtml(value) {
@@ -850,7 +853,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v18',
+    appVersion: 'v19',
     viewImage: captureViewImage(),
     ...data,
   };

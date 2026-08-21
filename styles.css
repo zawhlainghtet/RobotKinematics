@@ -258,7 +258,7 @@ input[type="range"] { width: 100%; accent-color: var(--blue); }
 .dh-table td { padding: 4px 2px; text-align: center; border-bottom: 1px solid var(--line); }
 .dh-table .dh-label { font-weight: 800; color: var(--blue); width: 28px; }
 .dh-table .dh-cell input {
-  width: 64px; min-height: 32px;
+  width: 78px; min-height: 32px;
   border: 1px solid var(--line); border-radius: 6px;
   padding: 4px 6px; text-align: center;
   background: #fbfdff; color: var(--ink); font-size: 0.82rem;
@@ -446,7 +446,7 @@ canvas {
   font-weight: 800;
 }
 .toolbar-report-actions {
-  width: min(100%, 360px);
+  width: min(100%, 420px);
   margin-top: 0;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -460,7 +460,7 @@ canvas {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   justify-self: end;
-  width: min(100%, 360px);
+  width: min(100%, 420px);
 }
 .export-strip button {
   min-width: 0;
@@ -468,6 +468,7 @@ canvas {
   padding: 0 8px;
   font-size: 0.82rem;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .hidden { display: none !important; }
