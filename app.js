@@ -850,7 +850,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v16',
+    appVersion: 'v17',
     viewImage: captureViewImage(),
     ...data,
   };
@@ -1004,12 +1004,6 @@ function init() {
   });
 
   $('centerTargetBtn').addEventListener('click', () => { $('xTarget').value=0; $('yTarget').value=0; update(); });
-  $('reset3DTargetBtn').addEventListener('click', () => {
-    $('xTarget3D').value=160; $('yTarget3D').value=60; $('zTarget3D').value=80;
-    stateDH.dh.forEach((d, i) => { d.theta = [10,-20,25,15,-10,10,5][i] || 0; });
-    update();
-  });
-
   // Canvas drag for IK target
   canvas.addEventListener('pointerdown', e => {
     if (mode() !== 'IK') return;

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=16">
+  <link rel="stylesheet" href="./styles.css?v=17">
 </head>
 <body>
   <main class="app-shell">
@@ -90,7 +90,6 @@
             <section class="panel-section" id="ik3DTargetPanel" style="display:none">
               <div class="section-head">
                 <div class="section-title">3D Position Target</div>
-                <button class="text-button" id="reset3DTargetBtn" type="button">Reset</button>
               </div>
               <div class="field-grid-3">
                 <label class="field"><span>X</span><input type="number" id="xTarget3D" value="160"></label>
@@ -134,41 +133,39 @@
           </div>
         </aside>
 
-        <section class="canvas-panel" id="panel2D">
-          <div class="canvas-toolbar">
-            <div><strong id="modeLabel">Inverse Kinematics</strong><span id="solverLabel">Analytic 2-link</span></div>
-            <div class="toolbar-actions">
-              <label class="toggle"><input type="checkbox" id="showReach" checked><span>Reach zone</span></label>
-              <div class="report-actions toolbar-report-actions" aria-label="Export report">
-                <button type="button" data-export="png">Download PNG</button>
-                <button type="button" data-export="json">Download JSON</button>
-                <button type="button" data-export="pdf">Download PDF</button>
+        <div class="viewer-stack">
+          <section class="canvas-panel" id="panel2D">
+            <div class="canvas-toolbar">
+              <div><strong id="modeLabel">Inverse Kinematics</strong><span id="solverLabel">Analytic 2-link</span></div>
+              <div class="toolbar-actions">
+                <label class="toggle"><input type="checkbox" id="showReach" checked><span>Reach zone</span></label>
               </div>
             </div>
-          </div>
-          <div class="canvas-wrap">
-            <canvas id="canvasArea" width="720" height="720"></canvas>
-          </div>
-        </section>
+            <div class="canvas-wrap">
+              <canvas id="canvasArea" width="720" height="720"></canvas>
+            </div>
+          </section>
 
-        <section class="canvas-panel" id="panel3D" style="display:none">
-          <div class="canvas-toolbar">
-            <div><strong id="dhModeLabel">DH Forward Kinematics</strong><span id="dhSolverLabel">Drag to rotate, scroll to zoom</span></div>
-            <div class="report-actions toolbar-report-actions" aria-label="Export report">
+          <section class="canvas-panel" id="panel3D" style="display:none">
+            <div class="canvas-toolbar">
+              <div><strong id="dhModeLabel">DH Forward Kinematics</strong><span id="dhSolverLabel">Drag to rotate, scroll to zoom</span></div>
+            </div>
+            <div id="threeContainer" class="three-container"></div>
+          </section>
+
+          <div class="export-strip" aria-label="Export report">
               <button type="button" data-export="png">Download PNG</button>
               <button type="button" data-export="json">Download JSON</button>
               <button type="button" data-export="pdf">Download PDF</button>
-            </div>
           </div>
-          <div id="threeContainer" class="three-container"></div>
-        </section>
+        </div>
 
         <aside class="results-panel">
           <section class="metric-grid">
             <div class="metric" id="endXMetric"><span>End X</span><strong id="endX">0.0</strong></div>
             <div class="metric" id="endYMetric"><span>End Y</span><strong id="endY">0.0</strong></div>
             <div class="metric" id="endZMetric" style="display:none"><span>End Z</span><strong id="endZ">0.0</strong></div>
-            <div class="metric"><span id="errorMetricLabel">Error</span><strong id="errorMetric">0.0</strong></div>
+            <div class="metric hidden-metric" id="errorMetricCard"><span id="errorMetricLabel">Error</span><strong id="errorMetric">0.0</strong></div>
             <div class="metric" id="reachMetricCard"><span>Reach</span><strong id="reachMetric">0-0</strong></div>
             <div class="metric" id="singularityMetric"><span>Singularity</span><strong id="singularityState">Stable</strong></div>
           </section>
@@ -215,6 +212,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=16"></script>
+  <script src="./app.js?v=17"></script>
 </body>
 </html>
