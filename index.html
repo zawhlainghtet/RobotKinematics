@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=15">
+  <link rel="stylesheet" href="./styles.css?v=16">
 </head>
 <body>
   <main class="app-shell">
@@ -140,9 +140,9 @@
             <div class="toolbar-actions">
               <label class="toggle"><input type="checkbox" id="showReach" checked><span>Reach zone</span></label>
               <div class="report-actions toolbar-report-actions" aria-label="Export report">
-                <button type="button" data-export="png">PNG</button>
-                <button type="button" data-export="json">JSON</button>
-                <button type="button" data-export="pdf">PDF</button>
+                <button type="button" data-export="png">Download PNG</button>
+                <button type="button" data-export="json">Download JSON</button>
+                <button type="button" data-export="pdf">Download PDF</button>
               </div>
             </div>
           </div>
@@ -155,9 +155,9 @@
           <div class="canvas-toolbar">
             <div><strong id="dhModeLabel">DH Forward Kinematics</strong><span id="dhSolverLabel">Drag to rotate, scroll to zoom</span></div>
             <div class="report-actions toolbar-report-actions" aria-label="Export report">
-              <button type="button" data-export="png">PNG</button>
-              <button type="button" data-export="json">JSON</button>
-              <button type="button" data-export="pdf">PDF</button>
+              <button type="button" data-export="png">Download PNG</button>
+              <button type="button" data-export="json">Download JSON</button>
+              <button type="button" data-export="pdf">Download PDF</button>
             </div>
           </div>
           <div id="threeContainer" class="three-container"></div>
@@ -215,6 +215,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=15"></script>
+  <script src="./app.js?v=16"></script>
 </body>
 </html>

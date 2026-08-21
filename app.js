@@ -732,7 +732,7 @@ function update() {
   const err = tgt ? Math.hypot(end.x - tgt.x, end.y - tgt.y) : 0;
   $('endX').textContent = end.x.toFixed(1);
   $('endY').textContent = end.y.toFixed(1);
-  $('errorMetric').textContent = err.toFixed(1);
+  $('errorMetric').textContent = err.toFixed(2);
   if ($('jointPositionError')) $('jointPositionError').textContent = err.toFixed(2);
   const mx = lv.reduce((s,v)=>s+v,0);
   const mn = Math.max(0, Math.max(...lv) - (mx - Math.max(...lv)));
@@ -850,7 +850,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v15',
+    appVersion: 'v16',
     viewImage: captureViewImage(),
     ...data,
   };

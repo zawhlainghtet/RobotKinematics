@@ -348,6 +348,12 @@ canvas {
   color: var(--muted);
 }
 .joint-row strong { color: var(--ink); }
+.position-error-row {
+  margin-top: 4px;
+  border-top-color: rgba(15, 159, 143, 0.35);
+  color: var(--ink);
+}
+.position-error-row strong { color: var(--teal); }
 
 .matrix-display {
   background: var(--panel-soft);
@@ -402,13 +408,14 @@ canvas {
   font-weight: 800;
 }
 .toolbar-report-actions {
-  width: 220px;
+  width: min(100%, 360px);
   margin-top: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .toolbar-report-actions button {
   min-height: 34px;
-  font-size: 0.86rem;
-  padding: 0 8px;
+  font-size: 0.78rem;
+  padding: 0 6px;
 }
 
 .hidden { display: none !important; }
