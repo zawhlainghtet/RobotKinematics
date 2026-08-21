@@ -400,7 +400,7 @@ function init3D() {
   camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 5000);
   camera.position.set(200, 180, 200);
 
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(window.devicePixelRatio);
   c.appendChild(renderer.domElement);
@@ -770,6 +770,14 @@ function downloadFile(name, type, content) {
   URL.revokeObjectURL(url);
 }
 
+function captureViewImage() {
+  if ((mode() === 'DH' || mode() === 'IK3D') && renderer) {
+    renderer.render(scene, camera);
+    return renderer.domElement.toDataURL('image/png');
+  }
+  return canvas.toDataURL('image/png');
+}
+
 function current2DReport() {
   const m = mode();
   const lv = links();
@@ -836,7 +844,8 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v11',
+    appVersion: 'v12',
+    viewImage: captureViewImage(),
     ...data,
   };
 }
@@ -878,6 +887,8 @@ function renderReportHtml(report) {
         <div class="box"><span class="label">End Effector</span>${escapeHtml(end)}</div>
         <div class="box"><span class="label">Position Error</span>${fmt(report.positionError, 3)}</div>
       </div>
+      <h2>Simulator View</h2>
+      <div class="box"><img src="${report.viewImage}" alt="Robot simulator view" style="width:100%;max-height:520px;object-fit:contain"></div>
       <h2>Joint Angles</h2>
       <table><thead><tr>${angles.map((_, i) => `<th>J${i + 1}</th>`).join('')}</tr></thead><tbody><tr>${angles.map(v => `<td>${fmt(v, 2)} deg</td>`).join('')}</tr></tbody></table>
       ${is3D ? `<h2>DH Parameters</h2><table><thead><tr><th>Joint</th><th>Theta</th><th>d</th><th>a</th><th>Alpha</th></tr></thead><tbody>${dhRows}</tbody></table>` : `<h2>Link Lengths</h2><table><tbody><tr>${report.linkLengths.map((v, i) => `<th>L${i + 1}</th>`).join('')}</tr><tr>${report.linkLengths.map(v => `<td>${fmt(v, 1)}</td>`).join('')}</tr></tbody></table>`}
@@ -891,6 +902,17 @@ function exportJsonReport() {
   const report = buildReportData();
   const stamp = report.generatedAt.replace(/[:.]/g, '-');
   downloadFile(`robot-kinematics-report-${stamp}.json`, 'application/json', JSON.stringify(report, null, 2));
+}
+
+function exportImageReport() {
+  update();
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const a = document.createElement('a');
+  a.href = captureViewImage();
+  a.download = `robot-kinematics-view-${stamp}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }
 
 function printReport() {
@@ -1021,6 +1043,7 @@ function init() {
     syncDHTable(); buildDHSliders(); update();
   }));
 
+  $('exportImageBtn').addEventListener('click', exportImageReport);
   $('exportJsonBtn').addEventListener('click', exportJsonReport);
   $('printReportBtn').addEventListener('click', printReport);
 
