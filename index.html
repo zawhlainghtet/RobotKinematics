@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=20">
+  <link rel="stylesheet" href="./styles.css?v=22">
 </head>
 <body>
   <main class="app-shell">
@@ -153,18 +153,21 @@
             <div id="threeContainer" class="three-container"></div>
           </section>
 
-          <div class="export-strip" aria-label="Export report">
-              <button type="button" data-export="png">Download PNG</button>
-              <button type="button" data-export="json">Download JSON</button>
-              <button type="button" data-export="pdf">Download PDF</button>
-          </div>
+          <section class="download-card" aria-label="Export report">
+            <div class="section-title">Download</div>
+            <div class="download-actions">
+              <button type="button" data-export="png">PNG</button>
+              <button type="button" data-export="json">JSON</button>
+              <button type="button" data-export="pdf">PDF</button>
+            </div>
+          </section>
         </div>
 
         <aside class="results-panel">
           <section class="metric-grid">
-            <div class="metric" id="endXMetric"><span>End X</span><strong id="endX">0.0</strong></div>
-            <div class="metric" id="endYMetric"><span>End Y</span><strong id="endY">0.0</strong></div>
-            <div class="metric" id="endZMetric" style="display:none"><span>End Z</span><strong id="endZ">0.0</strong></div>
+            <div class="metric axis-metric axis-x" id="endXMetric"><span>End X</span><strong id="endX">0.0</strong></div>
+            <div class="metric axis-metric axis-y" id="endYMetric"><span>End Y</span><strong id="endY">0.0</strong></div>
+            <div class="metric axis-metric axis-z" id="endZMetric" style="display:none"><span>End Z</span><strong id="endZ">0.0</strong></div>
             <div class="metric hidden-metric" id="errorMetricCard"><span id="errorMetricLabel">Error</span><strong id="errorMetric">0.0</strong></div>
             <div class="metric" id="reachMetricCard"><span>Reach</span><strong id="reachMetric">0-0</strong></div>
             <div class="metric" id="singularityMetric"><span>Singularity</span><strong id="singularityState">Stable</strong></div>
@@ -212,6 +215,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=20"></script>
+  <script src="./app.js?v=22"></script>
 </body>
 </html>

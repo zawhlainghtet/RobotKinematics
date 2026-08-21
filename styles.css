@@ -332,6 +332,30 @@ canvas {
   border-radius: 8px;
   background: #fbfdff;
 }
+.axis-metric {
+  --axis-color: var(--ink);
+  --axis-border: var(--line);
+  --axis-bg: #fbfdff;
+  border-color: var(--axis-border);
+  background: var(--axis-bg);
+}
+.axis-metric span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--axis-color);
+}
+.axis-metric span::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--axis-color);
+}
+.axis-metric strong { color: var(--axis-color); }
+.axis-metric.axis-x { --axis-color: #df3f3f; --axis-border: #efb3b3; --axis-bg: #fff7f7; }
+.axis-metric.axis-y { --axis-color: #0f9f8f; --axis-border: #9bd9d1; --axis-bg: #f2fffd; }
+.axis-metric.axis-z { --axis-color: #2563eb; --axis-border: #a9c4ff; --axis-bg: #f4f8ff; }
 .hidden-metric { display: none !important; }
 .singularity-card .section-title { margin-bottom: 0; }
 .singularity-badge {
@@ -376,6 +400,7 @@ canvas {
 .metric { padding: 10px; }
 .metric span { display: block; color: var(--muted); font-size: 0.78rem; font-weight: 800; }
 .metric strong { display: block; margin-top: 4px; font-size: 1.1rem; }
+.axis-metric strong { color: var(--axis-color); }
 .joint-table, .mini-card { margin-top: 12px; padding: 12px; }
 .joint-row {
   display: flex;
@@ -455,14 +480,24 @@ canvas {
   font-size: 0.78rem;
   padding: 0 6px;
 }
-.export-strip {
+.download-card {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 460px);
+  justify-self: end;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 10px 30px rgba(24, 32, 43, 0.08);
+}
+.download-card .section-title { margin-bottom: 0; }
+.download-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  justify-self: end;
-  width: min(100%, 420px);
 }
-.export-strip button {
+.download-actions button {
   min-width: 0;
   min-height: 36px;
   padding: 0 8px;
@@ -488,7 +523,7 @@ canvas {
   }
   .toolbar-actions,
   .toolbar-report-actions,
-  .export-strip {
+  .download-card {
     width: 100%;
   }
 }
