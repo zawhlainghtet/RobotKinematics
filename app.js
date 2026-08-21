@@ -844,7 +844,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v12',
+    appVersion: 'v13',
     viewImage: captureViewImage(),
     ...data,
   };
@@ -925,8 +925,19 @@ function printReport() {
   }
   win.document.write(renderReportHtml(report));
   win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 250);
+  const printWhenReady = () => {
+    win.focus();
+    setTimeout(() => win.print(), 120);
+  };
+  const reportImage = win.document.querySelector('img');
+  if (reportImage && reportImage.decode) {
+    reportImage.decode().then(printWhenReady).catch(printWhenReady);
+  } else if (reportImage && !reportImage.complete) {
+    reportImage.addEventListener('load', printWhenReady, { once: true });
+    reportImage.addEventListener('error', printWhenReady, { once: true });
+  } else {
+    printWhenReady();
+  }
 }
 
 // ══════════════════════════════════════
