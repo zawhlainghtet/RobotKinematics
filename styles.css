@@ -310,7 +310,7 @@ input[type="range"] { width: 100%; accent-color: var(--blue); }
   border: 1px solid var(--blue);
   border-radius: 8px;
   background: var(--panel);
-  color: var(--blue);
+  color: var(--ink);
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 800;
@@ -324,6 +324,7 @@ input[type="range"] { width: 100%; accent-color: var(--blue); }
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 .download-menu[open] summary {
+  color: var(--blue);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.16);
 }
 .download-options {
