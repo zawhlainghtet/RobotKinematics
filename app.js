@@ -853,7 +853,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v23',
+    appVersion: 'v24',
     viewImage: captureViewImage(),
     ...data,
   };
@@ -1060,6 +1060,24 @@ function init() {
   document.querySelectorAll('[data-export="png"]').forEach(btn => btn.addEventListener('click', exportImageReport));
   document.querySelectorAll('[data-export="json"]').forEach(btn => btn.addEventListener('click', exportJsonReport));
   document.querySelectorAll('[data-export="pdf"]').forEach(btn => btn.addEventListener('click', printReport));
+  const downloadMenus = Array.from(document.querySelectorAll('.download-menu'));
+  const closeInactiveDownloadMenus = event => {
+    const target = event.target;
+    const activeMenu = target instanceof Element ? target.closest('.download-menu') : null;
+    downloadMenus.forEach(menu => {
+      if (menu !== activeMenu) menu.open = false;
+    });
+  };
+  document.addEventListener('pointerdown', closeInactiveDownloadMenus, true);
+  document.addEventListener('click', closeInactiveDownloadMenus);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      downloadMenus.forEach(menu => { menu.open = false; });
+    }
+  });
+  document.querySelectorAll('.download-options button').forEach(btn => btn.addEventListener('click', () => {
+    btn.closest('details').open = false;
+  }));
 
   update();
 }

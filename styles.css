@@ -297,6 +297,57 @@ input[type="range"] { width: 100%; accent-color: var(--blue); }
   gap: 10px;
   flex-wrap: wrap;
 }
+.download-menu {
+  position: relative;
+  z-index: 5;
+}
+.download-menu summary {
+  display: grid;
+  min-height: 34px;
+  min-width: 106px;
+  place-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  list-style: none;
+  user-select: none;
+}
+.download-menu summary::-webkit-details-marker { display: none; }
+.download-menu summary:hover {
+  border-color: #b9c6d4;
+  background: #f8fafc;
+}
+.download-menu[open] summary {
+  border-color: #b8d4fe;
+  color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.08);
+}
+.download-options {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  width: 132px;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 14px 35px rgba(24, 32, 43, 0.14);
+}
+.download-options button {
+  min-width: 0;
+  min-height: 34px;
+  padding: 0 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: left;
+}
 
 .canvas-wrap { padding: 14px; }
 canvas {
@@ -480,32 +531,6 @@ canvas {
   font-size: 0.78rem;
   padding: 0 6px;
 }
-.download-card {
-  display: grid;
-  gap: 10px;
-  width: min(100%, 460px);
-  justify-self: end;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(255,255,255,0.92);
-  box-shadow: 0 10px 30px rgba(24, 32, 43, 0.08);
-}
-.download-card .section-title { margin-bottom: 0; }
-.download-actions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-.download-actions button {
-  min-width: 0;
-  min-height: 36px;
-  padding: 0 8px;
-  font-size: 0.82rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
 .hidden { display: none !important; }
 
 @media (max-width: 1100px) {
@@ -522,8 +547,14 @@ canvas {
     align-items: stretch;
   }
   .toolbar-actions,
-  .toolbar-report-actions,
-  .download-card {
+  .toolbar-report-actions {
+    width: 100%;
+  }
+  .download-menu { width: 100%; }
+  .download-menu summary { width: 100%; }
+  .download-options {
+    left: 0;
+    right: auto;
     width: 100%;
   }
 }

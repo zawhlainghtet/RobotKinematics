@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=23">
+  <link rel="stylesheet" href="./styles.css?v=24">
 </head>
 <body>
   <main class="app-shell">
@@ -139,6 +139,14 @@
               <div><strong id="modeLabel">Inverse Kinematics</strong><span id="solverLabel">Analytic 2-link</span></div>
               <div class="toolbar-actions">
                 <label class="toggle"><input type="checkbox" id="showReach" checked><span>Reach zone</span></label>
+                <details class="download-menu">
+                  <summary>Download</summary>
+                  <div class="download-options">
+                    <button type="button" data-export="png">PNG</button>
+                    <button type="button" data-export="json">JSON</button>
+                    <button type="button" data-export="pdf">PDF</button>
+                  </div>
+                </details>
               </div>
             </div>
             <div class="canvas-wrap">
@@ -149,17 +157,18 @@
           <section class="canvas-panel" id="panel3D" style="display:none">
             <div class="canvas-toolbar">
               <div><strong id="dhModeLabel">DH Forward Kinematics</strong><span id="dhSolverLabel">Drag to rotate, scroll to zoom</span></div>
+              <div class="toolbar-actions">
+                <details class="download-menu">
+                  <summary>Download</summary>
+                  <div class="download-options">
+                    <button type="button" data-export="png">PNG</button>
+                    <button type="button" data-export="json">JSON</button>
+                    <button type="button" data-export="pdf">PDF</button>
+                  </div>
+                </details>
+              </div>
             </div>
             <div id="threeContainer" class="three-container"></div>
-          </section>
-
-          <section class="download-card" aria-label="Export report">
-            <div class="section-title">Download</div>
-            <div class="download-actions">
-              <button type="button" data-export="png">PNG</button>
-              <button type="button" data-export="json">JSON</button>
-              <button type="button" data-export="pdf">PDF</button>
-            </div>
           </section>
         </div>
 
@@ -215,6 +224,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=23"></script>
+  <script src="./app.js?v=24"></script>
 </body>
 </html>
