@@ -597,6 +597,7 @@ function updateVisibility() {
   const count = linkCount();
   const isMulti = count > 2;
 
+  document.body.classList.toggle('is-3d-mode', is3D);
   $('controlsStd').style.display = is3D ? 'none' : '';
   $('controlsDH').style.display = is3D ? '' : 'none';
   $('ik3DTargetPanel').style.display = isIK3D ? '' : 'none';
