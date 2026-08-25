@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=28">
+  <link rel="stylesheet" href="./styles.css?v=29">
 </head>
 <body>
   <main class="app-shell">
@@ -201,18 +201,21 @@
             <div class="section-title">End-Effector Transform</div>
             <div class="matrix-display"><pre id="dhMatrix">Identity</pre></div>
           </section>
-          <section class="mini-card singularity-card stable" id="dhJacobianCard" style="display:none">
+          <section class="mini-card singularity-card stable" id="dhSingularityStatusCard" style="display:none">
             <div class="section-head">
-              <div class="section-title">Geometric Jacobian (6 × N)</div>
+              <div class="section-title">Singularity Status</div>
               <span class="singularity-badge" id="dhSingularityBadge">Stable</span>
             </div>
-            <div class="matrix-display jacobian-table-wrap" id="dhJacobian">Not calculated</div>
             <div class="singularity-values dh-singularity-values">
               <span>Rank <strong id="dhRank">0/0</strong></span>
               <span>&sigma;<sub>min</sub> <strong id="dhSigmaMin">0.0000</strong></span>
               <span>Condition <strong id="dhConditionNumber">&infin;</strong></span>
             </div>
             <p id="dhSingularityNote">Move a joint to calculate the Jacobian.</p>
+          </section>
+          <section class="mini-card" id="dhJacobianCard" style="display:none">
+            <div class="section-title">Geometric Jacobian (6 × N)</div>
+            <div class="matrix-display jacobian-table-wrap" id="dhJacobian">Not calculated</div>
           </section>
           <section class="mini-card">
             <div class="section-title">Solver</div>
@@ -224,6 +227,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=28"></script>
+  <script src="./app.js?v=29"></script>
 </body>
 </html>

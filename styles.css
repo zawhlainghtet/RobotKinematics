@@ -439,6 +439,9 @@ canvas {
   color: var(--muted);
   font-size: 0.78rem;
 }
+.dh-singularity-values {
+  margin-top: 12px;
+}
 .singularity-values strong { color: var(--ink); }
 .dh-singularity-values { flex-wrap: wrap; }
 .singularity-card.near .singularity-badge { color: var(--amber); background: rgba(183, 121, 31, 0.12); }

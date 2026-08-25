@@ -611,6 +611,7 @@ function updateVisibility() {
   $('errorMetricLabel').textContent = isPositionIK ? 'Position Error' : 'Error';
   $('jointOutputCard').style.display = isPositionIK ? '' : 'none';
   $('dhMatrixCard').style.display = is3D ? '' : 'none';
+  $('dhSingularityStatusCard').style.display = is3D ? '' : 'none';
   $('dhJacobianCard').style.display = is3D ? '' : 'none';
   $('singularityMetric').style.display = is3D || isIk ? 'none' : '';
   $('singularityCard').style.display = is3D || isIk ? 'none' : '';
@@ -687,7 +688,7 @@ function update() {
       ).join('')}</tbody></table>`;
     const labels = { stable: 'Stable', near: 'Near Singularity', singular: 'Singular' };
     $('dhSingularityBadge').textContent = labels[jac.level];
-    $('dhJacobianCard').className = `mini-card singularity-card ${jac.level}`;
+    $('dhSingularityStatusCard').className = `mini-card singularity-card ${jac.level}`;
     $('dhRank').textContent = `${jac.rank}/${jac.expectedRank}`;
     $('dhSigmaMin').textContent = jac.sigmaMin.toFixed(4);
     $('dhConditionNumber').textContent = Number.isFinite(jac.condition) ? jac.condition.toFixed(1) : '∞';
