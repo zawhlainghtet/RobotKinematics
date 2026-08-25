@@ -602,6 +602,7 @@ function updateVisibility() {
   $('controlsDH').style.display = is3D ? '' : 'none';
   $('ik3DTargetPanel').style.display = isIK3D ? '' : 'none';
   $('dhJointAnglesPanel').style.display = isDH ? '' : 'none';
+  $('dhTransferPanel').style.display = isDH ? '' : 'none';
   $('panel2D').style.display = is3D ? 'none' : '';
   $('panel3D').style.display = is3D ? '' : 'none';
   $('endXMetric').style.display = isPositionIK ? 'none' : '';
@@ -1048,6 +1049,16 @@ function init() {
     $('jointCountVal').textContent = '3';
     buildDHTable(); buildDHSliders(); buildJointOutput(3);
     if (threeInit) buildArm3D();
+    update();
+  });
+
+  $('carryDhToIkBtn').addEventListener('click', () => {
+    const res = fkDH(stateDH.dh);
+    $('xTarget3D').value = res.x.toFixed(2);
+    $('yTarget3D').value = res.y.toFixed(2);
+    $('zTarget3D').value = res.z.toFixed(2);
+    document.querySelector('input[name="mode"][value="IK3D"]').checked = true;
+    buildDHTable(); buildDHSliders(); buildJointOutput(stateDH.jointCount);
     update();
   });
 

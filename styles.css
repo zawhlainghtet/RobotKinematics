@@ -215,6 +215,7 @@ h1 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.7rem); line-height: 1.05; }
 input[type="range"] { width: 100%; accent-color: var(--blue); }
 
 .button-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.wide-button { width: 100%; font-weight: 800; }
 
 /* ── Joint Counter ── */
 .joint-counter {

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robot Arm Simulator</title>
-  <link rel="stylesheet" href="./styles.css?v=29">
+  <link rel="stylesheet" href="./styles.css?v=30">
 </head>
 <body>
   <main class="app-shell">
@@ -121,6 +121,10 @@
               <div class="section-title">Joint Angles</div>
               <div id="dhSliders"></div>
             </section>
+            <section class="panel-section" id="dhTransferPanel">
+              <div class="section-title">IK Transfer</div>
+              <button class="wide-button" type="button" id="carryDhToIkBtn">Carry to IK 3D</button>
+            </section>
             <section class="panel-section">
               <div class="section-title">Presets</div>
               <div class="button-grid">
@@ -227,6 +231,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=29"></script>
+  <script src="./app.js?v=30"></script>
 </body>
 </html>
