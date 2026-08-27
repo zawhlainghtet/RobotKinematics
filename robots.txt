@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zawhlainghtet.github.io/RobotKinematics/sitemap.xml
