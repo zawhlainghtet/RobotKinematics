@@ -9,6 +9,48 @@ const state = { draggingTarget: false, lastThetas: [0, 0, 0, 0, 0], viewScale: 1
 const STD_JOINT_MAX = 5;
 const DEFAULT_LINKS = [120, 100, 80, 65, 50];
 const DEFAULT_ANGLES = [20, 20, 10, 0, 0];
+const LEARNING_GUIDES = {
+  FK: {
+    label: 'FK 2D',
+    summary: 'Move the joint angles to calculate the end-effector position from known robot geometry.',
+    steps: [
+      ['Read inputs', 'The solver uses each link length and joint angle in order from the base.'],
+      ['Accumulate angle', 'Each link direction is the sum of the previous joint rotations.'],
+      ['Add link vectors', 'X and Y are built by adding L cos(theta) and L sin(theta) for every link.'],
+      ['Check condition', 'The Jacobian warning shows whether the arm is near a sensitive pose.'],
+    ],
+  },
+  IK: {
+    label: 'IK 2D',
+    summary: 'Drag the target or type X/Y to find joint angles that place the end-effector near that point.',
+    steps: [
+      ['Check reach', 'The target must be inside the minimum and maximum reach zone.'],
+      ['Solve angles', 'Two links use an analytic elbow solution; longer chains use CCD iteration.'],
+      ['Compare error', 'Position error shows the distance between the target and final hand position.'],
+      ['Choose posture', 'For two links, elbow up/down selects the alternate valid solution.'],
+    ],
+  },
+  DH: {
+    label: 'DH',
+    summary: 'Build a 3D robot from Standard DH parameters and inspect the transform, frames, and Jacobian.',
+    steps: [
+      ['Fill DH row', 'Each joint row defines theta, d, a, and alpha for one transform.'],
+      ['Multiply transforms', 'The final pose is T01 x T12 x ... x Tn from base to tool.'],
+      ['Read the matrix', 'The last column is tool position; the first 3x3 block is orientation.'],
+      ['Inspect Jacobian', 'Rank and condition number warn about singular or near-singular poses.'],
+    ],
+  },
+  IK3D: {
+    label: 'IK 3D',
+    summary: 'Set an X/Y/Z target and let the damped least-squares solver move the DH robot toward it.',
+    steps: [
+      ['Set target', 'The orange marker is the desired 3D tool position.'],
+      ['Measure error', 'The solver compares target position with the current end-effector position.'],
+      ['Update joints', 'Damped least squares uses the position Jacobian to adjust joint angles.'],
+      ['Confirm result', 'Small position error means the target is reached or closely approximated.'],
+    ],
+  },
+};
 
 const deg2rad = (d) => d * Math.PI / 180;
 const rad2deg = (r) => r * 180 / Math.PI;
@@ -325,6 +367,19 @@ function setStatus(msg, t = '') {
   $('reachStatus').className = `status-card ${t}`.trim();
 }
 
+function updateLearningGuide() {
+  const guide = LEARNING_GUIDES[mode()];
+  if (!guide) return;
+  $('guideMode').textContent = guide.label;
+  $('guideSummary').textContent = guide.summary;
+  $('guideSteps').innerHTML = guide.steps.map(([title, detail], index) => `
+    <div class="guide-step">
+      <span>${index + 1}</span>
+      <div><strong>${title}</strong><p>${detail}</p></div>
+    </div>
+  `).join('');
+}
+
 function buildJointOutput(count) {
   const c = $('jointOutput'); c.innerHTML = '';
   for (let i = 0; i < count; i++) {
@@ -639,6 +694,7 @@ function updateVisibility() {
     $('solverLabel').textContent = isIk ? (isMulti ? `CCD ${count}-link` : 'Analytic 2-link') : `${count}-link joint angle solve`;
     $('solverNote').textContent = isIk ? (isMulti ? `CCD inverse kinematics (${count} links)` : 'Analytic inverse kinematics') : `Forward kinematics (${count} links)`;
   }
+  updateLearningGuide();
 }
 
 function update() {
@@ -856,7 +912,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v27',
+    appVersion: 'v31',
     viewImage: captureViewImage(),
     ...data,
   };

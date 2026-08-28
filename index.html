@@ -24,7 +24,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Robot Arm Kinematics Web Simulator">
   <meta name="twitter:description" content="Interactive FK, IK, DH parameter, Jacobian, and 3D robot arm kinematics simulator.">
-  <link rel="stylesheet" href="./styles.css?v=30">
+  <link rel="stylesheet" href="./styles.css?v=31">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -261,12 +261,29 @@
             <div class="section-title">Solver</div>
             <p id="solverNote">Analytic inverse kinematics</p>
           </section>
+          <section class="mini-card learning-card" aria-label="Learning guide">
+            <div class="section-head">
+              <div class="section-title">Learning Guide</div>
+              <span class="guide-mode" id="guideMode">FK 2D</span>
+            </div>
+            <p class="guide-summary" id="guideSummary">Move a joint angle to see how link rotations produce the end-effector pose.</p>
+            <div class="guide-steps" id="guideSteps"></div>
+            <details class="guide-help">
+              <summary>DH Symbols</summary>
+              <dl>
+                <div><dt>&theta;</dt><dd>Joint rotation about the Z axis.</dd></div>
+                <div><dt>d</dt><dd>Offset along the Z axis.</dd></div>
+                <div><dt>a</dt><dd>Link length along the X axis.</dd></div>
+                <div><dt>&alpha;</dt><dd>Twist angle about the X axis.</dd></div>
+              </dl>
+            </details>
+          </section>
         </aside>
       </div>
     </section>
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=30"></script>
+  <script src="./app.js?v=31"></script>
 </body>
 </html>
