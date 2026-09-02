@@ -19,12 +19,12 @@
   </script>
   <meta property="og:type" content="website">
   <meta property="og:title" content="Robot Arm Kinematics Web Simulator">
-  <meta property="og:description" content="Explore FK, IK, DH parameters, Jacobian singularity analysis, 3D visualization, and 7-DOF robot arm kinematics in the browser.">
+  <meta property="og:description" content="Explore FK, IK, DH parameters, Jacobian singularity analysis, 3D visualization, 7-DOF robot arm kinematics, and robotics project context in the browser.">
   <meta property="og:url" content="https://zawhlainghtet.github.io/RobotKinematics/">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Robot Arm Kinematics Web Simulator">
-  <meta name="twitter:description" content="Interactive FK, IK, DH parameter, Jacobian, and 3D robot arm kinematics simulator.">
-  <link rel="stylesheet" href="./styles.css?v=31">
+  <meta name="twitter:description" content="Interactive FK, IK, DH parameter, Jacobian, 3D robot arm kinematics simulator, and robotics project context.">
+  <link rel="stylesheet" href="./styles.css?v=46">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -103,6 +103,34 @@
               </div>
               <div class="hint" id="ccdHint">3–5 link IK uses CCD solving.</div>
             </section>
+            <section class="panel-section" id="trajectoryPanel">
+              <div class="section-head">
+                <div class="section-title">Trajectory</div>
+                <label class="switch"><input type="checkbox" id="showTrajectory" checked><span></span></label>
+              </div>
+              <div class="field-grid">
+                <label class="field"><span>Start X</span><input type="number" id="trajStartX" value="40"></label>
+                <label class="field"><span>Start Y</span><input type="number" id="trajStartY" value="110"></label>
+              </div>
+              <div class="slider-field compact-slider">
+                <label>Steps</label>
+                <input type="range" id="trajStepsRange" min="8" max="48" value="15">
+                <input type="number" id="trajStepsIn" min="8" max="48" value="15">
+              </div>
+              <div class="hint">Preview from start point to the IK target.</div>
+            </section>
+            <section class="panel-section" id="obstaclePanel">
+              <div class="section-head">
+                <div class="section-title">Obstacle</div>
+                <label class="switch danger-switch"><input type="checkbox" id="showObstacle" checked><span></span></label>
+              </div>
+              <div class="field-grid">
+                <label class="field"><span>X</span><input type="number" id="obstacleX" value="115"></label>
+                <label class="field"><span>Y</span><input type="number" id="obstacleY" value="145"></label>
+                <label class="field"><span>Radius</span><input type="number" id="obstacleR" min="10" max="120" value="32"></label>
+              </div>
+              <div class="hint">Collision check uses the active arm links.</div>
+            </section>
             <section class="panel-section" id="fkPanel">
               <div class="section-title">Joint Angles</div>
               <div class="slider-field"><label>theta 1</label><input type="range" id="theta1Range" min="-180" max="180" value="20"><input type="number" id="theta1In" value="20"></div>
@@ -173,12 +201,13 @@
           </div>
         </aside>
 
-        <div class="viewer-stack">
+        <div class="viewer-stack" id="viewerStack">
           <section class="canvas-panel" id="panel2D">
             <div class="canvas-toolbar">
               <div><strong id="modeLabel">Inverse Kinematics</strong><span id="solverLabel">Analytic 2-link</span></div>
               <div class="toolbar-actions">
                 <label class="toggle"><input type="checkbox" id="showReach" checked><span>Reach zone</span></label>
+                <label class="toggle"><input type="checkbox" id="showWorkspaceFill" checked><span>Workspace</span></label>
                 <details class="download-menu">
                   <summary>Download</summary>
                   <div class="download-options">
@@ -220,6 +249,8 @@
             <div class="metric hidden-metric" id="errorMetricCard"><span id="errorMetricLabel">Error</span><strong id="errorMetric">0.0</strong></div>
             <div class="metric" id="reachMetricCard"><span>Reach</span><strong id="reachMetric">0-0</strong></div>
             <div class="metric" id="singularityMetric"><span>Singularity</span><strong id="singularityState">Stable</strong></div>
+            <div class="metric" id="workspaceMetricCard"><span>Workspace Use</span><strong id="workspaceMetric">0%</strong></div>
+            <div class="metric" id="collisionMetricCard"><span>Collision</span><strong id="collisionMetric">Clear</strong></div>
           </section>
           <section class="joint-table" id="jointOutputCard">
             <div class="section-title">Joint Output</div>
@@ -240,6 +271,20 @@
           <section class="mini-card" id="dhMatrixCard" style="display:none">
             <div class="section-title">End-Effector Transform</div>
             <div class="matrix-display"><pre id="dhMatrix">Identity</pre></div>
+          </section>
+          <section class="mini-card" id="planarMatrixCard">
+            <div class="section-title">Planar Transform</div>
+            <div class="matrix-display"><pre id="planarMatrix">Identity</pre></div>
+          </section>
+          <section class="mini-card">
+            <div class="section-title">Preview Features</div>
+            <div class="feature-list">
+              <span>FK / IK</span>
+              <span>Workspace</span>
+              <span>Trajectory</span>
+              <span>Collision</span>
+              <span>Live Matrix</span>
+            </div>
           </section>
           <section class="mini-card singularity-card stable" id="dhSingularityStatusCard" style="display:none">
             <div class="section-head">
@@ -284,6 +329,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=31"></script>
+  <script src="./app.js?v=46"></script>
 </body>
 </html>

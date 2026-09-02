@@ -12,6 +12,10 @@ Live site: https://zawhlainghtet.github.io/RobotKinematics/
 - 3D position inverse kinematics
 - Up to 7-DOF robot arm experiments
 - Jacobian-based singularity analysis and warnings
+- 2D workspace visualization with live workspace-use feedback
+- IK trajectory preview from a start point to the target
+- Circular obstacle collision detection for active planar links
+- Live planar transform matrix for the end-effector pose
 - End-effector position, transform matrix, error values, and report exports
 
 ## Keywords

@@ -5,7 +5,15 @@ const ctx = canvas.getContext('2d');
 const cx = canvas.width / 2;
 const cy = canvas.height / 2;
 
-const state = { draggingTarget: false, lastThetas: [0, 0, 0, 0, 0], viewScale: 1 };
+const state = {
+  draggingTarget: false,
+  lastThetas: [0, 0, 0, 0, 0],
+  viewScale: 1,
+  viewZoom: 1,
+  canvasPointers: new Map(),
+  pinchStartDistance: 0,
+  pinchStartZoom: 1,
+};
 const STD_JOINT_MAX = 5;
 const DEFAULT_LINKS = [120, 100, 80, 65, 50];
 const DEFAULT_ANGLES = [20, 20, 10, 0, 0];
@@ -318,7 +326,8 @@ function drawReachZone(lv) {
   const mx = lv.reduce((s,l)=>s+l,0), lg = Math.max(...lv);
   const mn = Math.max(0, lg - (mx - lg));
   ctx.save(); ctx.translate(cx, cy);
-  ctx.fillStyle = 'rgba(37,99,235,0.06)'; ctx.strokeStyle = 'rgba(37,99,235,0.22)'; ctx.lineWidth = 2;
+  ctx.fillStyle = $('showWorkspaceFill').checked ? 'rgba(37,99,235,0.06)' : 'rgba(37,99,235,0)';
+  ctx.strokeStyle = 'rgba(37,99,235,0.22)'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(0, 0, mx * state.viewScale, 0, Math.PI*2); ctx.fill(); ctx.stroke();
   if (mn > 0) {
     ctx.globalCompositeOperation = 'destination-out';
@@ -330,6 +339,110 @@ function drawReachZone(lv) {
   ctx.restore();
 }
 
+function solve2DForTarget(lv, tx, ty, initialThetas) {
+  if (lv.length === 2) {
+    const sol = ik2(lv[0], lv[1], tx, ty, elbowMode());
+    return sol.ok ? sol.thetas : initialThetas.slice(0, 2);
+  }
+  return ccdIk(lv, tx, ty, initialThetas).thetas;
+}
+
+function drawTrajectory(lv, target) {
+  if (!$('showTrajectory').checked || mode() !== 'IK' || !target) return null;
+  const start = { x: numVal('trajStartX'), y: numVal('trajStartY') };
+  const steps = clamp(numVal('trajStepsIn'), 8, 48);
+  const path = [];
+  let seed = state.lastThetas.slice(0, lv.length);
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = start.x + (target.x - start.x) * t;
+    const y = start.y + (target.y - start.y) * t;
+    seed = solve2DForTarget(lv, x, y, seed);
+    const joints = fk(lv, seed).joints;
+    const end = joints[joints.length - 1];
+    path.push({ x: end.x, y: end.y });
+  }
+
+  ctx.save();
+  path.forEach((p, i) => {
+    const isStart = i === 0;
+    const isEnd = i === path.length - 1;
+    ctx.fillStyle = isStart ? '#ffffff' : '#0f9f8f';
+    ctx.strokeStyle = '#0f9f8f';
+    ctx.lineWidth = isStart || isEnd ? 2 : 0;
+    ctx.beginPath();
+    ctx.arc(cx + p.x * state.viewScale, cy - p.y * state.viewScale, isStart || isEnd ? 5 : 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    if (isStart || isEnd) ctx.stroke();
+  });
+  ctx.restore();
+  return path;
+}
+
+function drawObstacle() {
+  if (!$('showObstacle').checked) return null;
+  const obstacle = {
+    x: numVal('obstacleX'),
+    y: numVal('obstacleY'),
+    r: clamp(numVal('obstacleR'), 10, 120),
+  };
+  const px = cx + obstacle.x * state.viewScale;
+  const py = cy - obstacle.y * state.viewScale;
+  ctx.save();
+  ctx.fillStyle = 'rgba(223,63,63,0.08)';
+  ctx.strokeStyle = 'rgba(223,63,63,0.58)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(px, py, obstacle.r * state.viewScale, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#df3f3f';
+  ctx.beginPath();
+  ctx.arc(px, py, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  return obstacle;
+}
+
+function distancePointToSegment(point, a, b) {
+  const vx = b.x - a.x, vy = b.y - a.y;
+  const wx = point.x - a.x, wy = point.y - a.y;
+  const len2 = vx * vx + vy * vy;
+  const t = len2 > 0 ? clamp((wx * vx + wy * vy) / len2, 0, 1) : 0;
+  const px = a.x + vx * t, py = a.y + vy * t;
+  return Math.hypot(point.x - px, point.y - py);
+}
+
+function pathClearance(points, obstacle) {
+  if (!points || points.length < 2 || !obstacle) return Infinity;
+  let minDistance = Infinity;
+  for (let i = 0; i < points.length - 1; i++) {
+    minDistance = Math.min(minDistance, distancePointToSegment(obstacle, points[i], points[i + 1]) - obstacle.r);
+  }
+  return minDistance;
+}
+
+function collisionStatus(points, obstacle, path = null) {
+  if (!obstacle) return { level: 'clear', label: 'Off', distance: Infinity };
+  const linkDistance = pathClearance(points, obstacle);
+  const pathDistance = pathClearance(path, obstacle);
+  const minDistance = Math.min(linkDistance, pathDistance);
+  const nearClearance = Math.max(24, obstacle.r * 0.75);
+  if (minDistance <= 0) return { level: 'crossing', label: 'Crossing', distance: minDistance };
+  if (minDistance <= nearClearance) return { level: 'near', label: 'Near', distance: minDistance };
+  return { level: 'clear', label: 'Clear', distance: minDistance };
+}
+
+function updatePlanarMatrix(angles, end) {
+  const phi = angles.reduce((sum, value) => sum + value, 0);
+  const c = Math.cos(phi), s = Math.sin(phi);
+  const f = v => v.toFixed(3).padStart(7);
+  $('planarMatrix').textContent =
+    `${f(c)} ${f(-s)} ${f(end.x)}\n` +
+    `${f(s)} ${f(c)} ${f(end.y)}\n` +
+    `${f(0)} ${f(0)} ${f(1)}`;
+}
+
 function drawTarget(x, y, ok) {
   const px = cx + x * state.viewScale, py = cy - y * state.viewScale;
   ctx.save();
@@ -339,6 +452,9 @@ function drawTarget(x, y, ok) {
   ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI*2); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(px-17,py); ctx.lineTo(px+17,py);
   ctx.moveTo(px,py-17); ctx.lineTo(px,py+17); ctx.stroke();
+  ctx.fillStyle = ok ? '#2563eb' : '#df3f3f';
+  ctx.font = '700 12px Inter, system-ui, sans-serif';
+  ctx.fillText('Target', px + 14, py - 14);
   ctx.restore();
 }
 
@@ -358,6 +474,10 @@ function drawArm2D(points, count) {
     ctx.beginPath(); ctx.arc(cx + p.x * state.viewScale, cy - p.y * state.viewScale, i === points.length-1 ? 9 : 8, 0, Math.PI*2);
     ctx.fill(); ctx.stroke();
   });
+  const end = points[points.length - 1];
+  ctx.fillStyle = '#18202b';
+  ctx.font = '700 12px Inter, system-ui, sans-serif';
+  ctx.fillText('EE', cx + end.x * state.viewScale + 12, cy - end.y * state.viewScale + 18);
   ctx.restore();
   return points[points.length - 1];
 }
@@ -464,10 +584,11 @@ function init3D() {
   renderer.setPixelRatio(window.devicePixelRatio);
   c.appendChild(renderer.domElement);
 
-  // Minimal orbit: left-drag=rotate, right-drag=pan, scroll=zoom
+  // Minimal orbit: drag=rotate, right-drag/shift-drag=pan, scroll/pinch=zoom
   orbit = { target: new THREE.Vector3(0, 50, 0), dragging: false, button: -1,
     prev: {x:0,y:0}, spherical: new THREE.Spherical(), sphericalDelta: new THREE.Spherical(),
-    panOffset: new THREE.Vector3(), rotateSpeed: 0.005, panSpeed: 0.5, zoomSpeed: 1.1 };
+    panOffset: new THREE.Vector3(), rotateSpeed: 0.005, panSpeed: 0.5, zoomSpeed: 1.1,
+    pointers: new Map(), pinchStartDistance: 0, pinchStartRadius: 0 };
 
   function updateOrbitCamera() {
     const offset = new THREE.Vector3().setFromSpherical(orbit.spherical);
@@ -483,12 +604,44 @@ function init3D() {
   sphericalFromCamera();
 
   const el = renderer.domElement;
+  function rememberOrbitPointer(e) {
+    orbit.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  }
+  function orbitPinchDistance() {
+    const pts = [...orbit.pointers.values()];
+    if (pts.length < 2) return 0;
+    return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+  }
+  function endOrbitPointer(e) {
+    orbit.pointers.delete(e.pointerId);
+    orbit.dragging = orbit.pointers.size > 0;
+    if (orbit.pointers.size < 2) orbit.pinchStartDistance = 0;
+  }
   el.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    rememberOrbitPointer(e);
+    el.setPointerCapture(e.pointerId);
+    if (orbit.pointers.size === 2) {
+      orbit.dragging = false;
+      orbit.pinchStartDistance = orbitPinchDistance();
+      orbit.pinchStartRadius = orbit.spherical.radius;
+      return;
+    }
     orbit.dragging = true; orbit.button = e.button;
     orbit.prev = { x: e.clientX, y: e.clientY };
-    el.setPointerCapture(e.pointerId);
   });
   el.addEventListener('pointermove', e => {
+    e.preventDefault();
+    if (!orbit.pointers.has(e.pointerId)) return;
+    rememberOrbitPointer(e);
+    if (orbit.pointers.size >= 2 && orbit.pinchStartDistance > 0) {
+      const distance = orbitPinchDistance();
+      if (distance > 0) {
+        orbit.spherical.radius = clamp(orbit.pinchStartRadius * (orbit.pinchStartDistance / distance), 30, 1500);
+        updateOrbitCamera();
+      }
+      return;
+    }
     if (!orbit.dragging) return;
     const dx = e.clientX - orbit.prev.x, dy = e.clientY - orbit.prev.y;
     orbit.prev = { x: e.clientX, y: e.clientY };
@@ -513,7 +666,8 @@ function init3D() {
     }
     updateOrbitCamera();
   });
-  el.addEventListener('pointerup', () => { orbit.dragging = false; });
+  el.addEventListener('pointerup', endOrbitPointer);
+  el.addEventListener('pointercancel', endOrbitPointer);
   el.addEventListener('wheel', e => {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1 / orbit.zoomSpeed : orbit.zoomSpeed;
@@ -593,6 +747,17 @@ function buildArm3D() {
 }
 
 function updateArm3D() {
+  if (renderer) {
+    const c = $('threeContainer');
+    const w = c.clientWidth || 700;
+    const h = c.clientHeight || 560;
+    if (renderer.domElement.width !== Math.round(w * window.devicePixelRatio) ||
+        renderer.domElement.height !== Math.round(h * window.devicePixelRatio)) {
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    }
+  }
   const res = fkDH(stateDH.dh);
   const joints = res.joints;
   const matrices = res.matrices;
@@ -652,6 +817,7 @@ function updateVisibility() {
   const count = linkCount();
   const isMulti = count > 2;
 
+  document.body.classList.toggle('is-2d-mode', !is3D);
   document.body.classList.toggle('is-3d-mode', is3D);
   $('controlsStd').style.display = is3D ? 'none' : '';
   $('controlsDH').style.display = is3D ? '' : 'none';
@@ -669,10 +835,15 @@ function updateVisibility() {
   $('dhMatrixCard').style.display = is3D ? '' : 'none';
   $('dhSingularityStatusCard').style.display = is3D ? '' : 'none';
   $('dhJacobianCard').style.display = is3D ? '' : 'none';
+  $('planarMatrixCard').style.display = is3D ? 'none' : '';
   $('singularityMetric').style.display = is3D || isIk ? 'none' : '';
   $('singularityCard').style.display = is3D || isIk ? 'none' : '';
+  $('workspaceMetricCard').style.display = is3D ? 'none' : '';
+  $('collisionMetricCard').style.display = is3D ? 'none' : '';
 
   $('ikPanel').classList.toggle('hidden', !isIk);
+  $('trajectoryPanel').classList.toggle('hidden', !isIk);
+  $('obstaclePanel').classList.toggle('hidden', is3D);
   $('fkPanel').classList.toggle('hidden', isIk || is3D);
   for (let i = 3; i <= STD_JOINT_MAX; i++) {
     $(`L${i}Field`).classList.toggle('hidden', count < i);
@@ -762,10 +933,12 @@ function update() {
   // 2D IK / FK
   drawGrid();
   const lv = links();
-  let th = [], tgt = null, ok = true;
+  let th = [], tgt = null, ok = true, trajectoryPath = null;
   const maxReach = lv.reduce((sum, value) => sum + value, 0);
-  state.viewScale = Math.min(1, (Math.min(canvas.width, canvas.height) / 2 - 42) / Math.max(maxReach, 1));
+  const fitScale = Math.min(1, (Math.min(canvas.width, canvas.height) / 2 - 42) / Math.max(maxReach, 1));
+  state.viewScale = fitScale * state.viewZoom;
   drawReachZone(lv);
+  const obstacle = drawObstacle();
 
   if (m === 'IK') {
     tgt = { x: numVal('xTarget'), y: numVal('yTarget') };
@@ -773,13 +946,8 @@ function update() {
     const mx = lv.reduce((s,v)=>s+v,0);
     const mn = Math.max(0, Math.max(...lv) - (mx - Math.max(...lv)));
     ok = r <= mx && r >= mn;
-    if (lv.length === 2) {
-      const sol = ik2(lv[0], lv[1], tgt.x, tgt.y, elbowMode());
-      th = sol.ok ? sol.thetas : state.lastThetas.slice(0, 2);
-    } else {
-      th = ccdIk(lv, tgt.x, tgt.y, state.lastThetas).thetas;
-    }
-    drawTarget(tgt.x, tgt.y, ok);
+    trajectoryPath = drawTrajectory(lv, tgt);
+    th = solve2DForTarget(lv, tgt.x, tgt.y, state.lastThetas);
   } else {
     th = Array.from({ length: lv.length }, (_, i) => deg2rad(numVal(`theta${i + 1}In`)));
   }
@@ -787,6 +955,8 @@ function update() {
   state.lastThetas = th.slice();
   const pts = fk(lv, th).joints;
   const end = drawArm2D(pts, lv.length);
+  if (tgt) drawTarget(tgt.x, tgt.y, ok);
+  const collision = collisionStatus(pts, obstacle, trajectoryPath);
 
   const err = tgt ? Math.hypot(end.x - tgt.x, end.y - tgt.y) : 0;
   $('endX').textContent = end.x.toFixed(1);
@@ -796,6 +966,11 @@ function update() {
   const mx = lv.reduce((s,v)=>s+v,0);
   const mn = Math.max(0, Math.max(...lv) - (mx - Math.max(...lv)));
   $('reachMetric').textContent = `${mn.toFixed(0)}-${mx.toFixed(0)}`;
+  const radialUse = Math.hypot(end.x, end.y) / Math.max(mx, 1);
+  $('workspaceMetric').textContent = `${clamp(radialUse * 100, 0, 100).toFixed(0)}%`;
+  $('collisionMetric').textContent = collision.label;
+  $('collisionMetricCard').className = `metric ${collision.level}`;
+  updatePlanarMatrix(th, end);
 
   for (let i = 0; i < lv.length; i++) {
     const el = $(`thOut${i}`);
@@ -804,6 +979,8 @@ function update() {
 
   const singularity = updateSingularity(lv, th);
   if (tgt && !ok) setStatus('Target outside reach', 'error');
+  else if (collision.level === 'crossing') setStatus('Obstacle crossing', 'error');
+  else if (collision.level === 'near') setStatus('Obstacle near link', 'warning');
   else if (tgt && err > 1) setStatus('Approximate solution', 'warning');
   else if (singularity.level === 'singular') setStatus('Singular configuration', 'error');
   else if (singularity.level === 'near') setStatus('Near singularity', 'warning');
@@ -858,6 +1035,12 @@ function current2DReport() {
   const jac = jacobianMetrics(lv, anglesRad);
   const maxReach = lv.reduce((sum, value) => sum + value, 0);
   const minReach = Math.max(0, Math.max(...lv) - (maxReach - Math.max(...lv)));
+  const obstacle = $('showObstacle').checked
+    ? { x: numVal('obstacleX'), y: numVal('obstacleY'), radius: clamp(numVal('obstacleR'), 10, 120) }
+    : null;
+  const collision = obstacle
+    ? collisionStatus(fkResult.joints, { x: obstacle.x, y: obstacle.y, r: obstacle.radius })
+    : { level: 'clear', label: 'Off', distance: Infinity };
   return {
     family: '2D planar arm',
     mode: m === 'IK' ? 'IK 2D' : 'FK 2D',
@@ -868,6 +1051,19 @@ function current2DReport() {
     endEffector: { x: end.x, y: end.y },
     positionError: target ? Math.hypot(end.x - target.x, end.y - target.y) : 0,
     reachRange: { min: minReach, max: maxReach },
+    workspaceUsePercent: clamp(Math.hypot(end.x, end.y) / Math.max(maxReach, 1) * 100, 0, 100),
+    trajectory: m === 'IK' && $('showTrajectory').checked
+      ? {
+          start: { x: numVal('trajStartX'), y: numVal('trajStartY') },
+          target,
+          steps: clamp(numVal('trajStepsIn'), 8, 48),
+        }
+      : null,
+    obstacle,
+    collision: {
+      level: collision.level,
+      clearance: Number.isFinite(collision.distance) ? collision.distance : null,
+    },
     jacobianCondition: {
       level: jac.level,
       sigmaMin: jac.sigmaMin,
@@ -912,7 +1108,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v31',
+    appVersion: 'v46-pinch-zoom-3d',
     viewImage: captureViewImage(),
     ...data,
   };
@@ -1019,6 +1215,22 @@ function canvasToWorld(e) {
   };
 }
 
+function rememberCanvasPointer(e) {
+  state.canvasPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+}
+
+function canvasPinchDistance() {
+  const pts = [...state.canvasPointers.values()];
+  if (pts.length < 2) return 0;
+  return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+}
+
+function endCanvasPointer(e) {
+  state.canvasPointers.delete(e.pointerId);
+  state.draggingTarget = false;
+  if (state.canvasPointers.size < 2) state.pinchStartDistance = 0;
+}
+
 function init() {
   buildJointOutput(linkCount());
 
@@ -1034,7 +1246,16 @@ function init() {
   }));
 
   ['elbow'].forEach(n => [...document.getElementsByName(n)].forEach(el => el.addEventListener('change', update)));
-  [...Array.from({ length: STD_JOINT_MAX }, (_, i) => `L${i + 1}`), 'xTarget', 'yTarget', 'showReach'].forEach(id => $(id).addEventListener('input', update));
+  [
+    ...Array.from({ length: STD_JOINT_MAX }, (_, i) => `L${i + 1}`),
+    'xTarget', 'yTarget', 'showReach', 'showWorkspaceFill',
+    'showTrajectory', 'trajStartX', 'trajStartY', 'trajStepsRange', 'trajStepsIn',
+    'showObstacle', 'obstacleX', 'obstacleY', 'obstacleR',
+  ].forEach(id => $(id).addEventListener('input', event => {
+    if (id === 'trajStepsRange') $('trajStepsIn').value = event.target.value;
+    if (id === 'trajStepsIn') $('trajStepsRange').value = clamp(Number(event.target.value) || 8, 8, 48);
+    update();
+  }));
   ['xTarget3D', 'yTarget3D', 'zTarget3D'].forEach(id => $(id).addEventListener('input', update));
   Array.from({ length: STD_JOINT_MAX }, (_, i) => `theta${i + 1}`).forEach(base => {
     $(`${base}Range`).addEventListener('input', e => { $(`${base}In`).value = e.target.value; update(); });
@@ -1062,21 +1283,41 @@ function init() {
     document.querySelector('input[name="mode"][value="IK"]').checked = true;
     document.querySelector('input[name="linkCount"][value="2"]').checked = true;
     document.querySelector('input[name="elbow"][value="down"]').checked = true;
+    state.viewZoom = 1;
     state.lastThetas = [0,0,0,0,0]; buildJointOutput(2); update();
   });
 
   $('centerTargetBtn').addEventListener('click', () => { $('xTarget').value=0; $('yTarget').value=0; update(); });
   // Canvas drag for IK target
   canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+    rememberCanvasPointer(e);
+    if (state.canvasPointers.size === 2) {
+      state.draggingTarget = false;
+      state.pinchStartDistance = canvasPinchDistance();
+      state.pinchStartZoom = state.viewZoom;
+      return;
+    }
     if (mode() !== 'IK') return;
-    state.draggingTarget = true; canvas.setPointerCapture(e.pointerId);
+    state.draggingTarget = true;
     const p = canvasToWorld(e); $('xTarget').value=p.x.toFixed(0); $('yTarget').value=p.y.toFixed(0); update();
   });
   canvas.addEventListener('pointermove', e => {
+    e.preventDefault();
+    if (!state.canvasPointers.has(e.pointerId)) return;
+    rememberCanvasPointer(e);
+    if (state.canvasPointers.size >= 2 && state.pinchStartDistance > 0) {
+      state.draggingTarget = false;
+      state.viewZoom = clamp(state.pinchStartZoom * (canvasPinchDistance() / state.pinchStartDistance), 0.55, 2.8);
+      update();
+      return;
+    }
     if (!state.draggingTarget || mode() !== 'IK') return;
     const p = canvasToWorld(e); $('xTarget').value=p.x.toFixed(0); $('yTarget').value=p.y.toFixed(0); update();
   });
-  canvas.addEventListener('pointerup', () => { state.draggingTarget = false; });
+  canvas.addEventListener('pointerup', endCanvasPointer);
+  canvas.addEventListener('pointercancel', endCanvasPointer);
 
   // DH controls
   $('jointMinus').addEventListener('click', () => {
