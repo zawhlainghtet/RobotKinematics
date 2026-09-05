@@ -274,22 +274,26 @@ function inverse3(M) {
   return [[A,B,C],[D,E,F],[G,H,I]].map(row => row.map(v => v / det));
 }
 
+function cloneDhParams(dhParams) {
+  return dhParams.map(d => ({ ...d }));
+}
+
 // Position-only 3D IK using damped least squares:
 // dq = Jv^T (Jv Jv^T + lambda^2 I)^-1 error.
-function solveIK3D(target) {
-  const n = stateDH.jointCount;
-  if (stateDH.dh.every(d => Math.abs(d.theta) < 0.001)) {
+function solveIK3DOnParams(dhParams, target) {
+  const n = dhParams.length;
+  if (dhParams.every(d => Math.abs(d.theta) < 0.001)) {
     const seed = [10,-20,25,15,-10,10,5];
-    stateDH.dh.forEach((d, idx) => { d.theta = seed[idx]; });
+    dhParams.forEach((d, idx) => { d.theta = seed[idx]; });
   }
   let error = Infinity, iterations = 0;
   const lambda = 6;
   for (; iterations < 160; iterations++) {
-    const res = fkDH(stateDH.dh);
+    const res = fkDH(dhParams);
     const err = [target.x-res.x, target.y-res.y, target.z-res.z];
     error = Math.hypot(...err);
     if (error < 0.5) break;
-    const J = dhJacobianMetrics(stateDH.dh, res).J.slice(0, 3);
+    const J = dhJacobianMetrics(dhParams, res).J.slice(0, 3);
     const B = Array.from({length:3}, (_, r) => Array.from({length:3}, (_, c) =>
       J[r].reduce((sum, value, k) => sum + value * J[c][k], 0) + (r === c ? lambda * lambda : 0)));
     const inv = inverse3(B);
@@ -297,10 +301,14 @@ function solveIK3D(target) {
     const y = inv.map(row => row.reduce((sum, value, k) => sum + value * err[k], 0));
     for (let joint = 0; joint < n; joint++) {
       const dq = J.reduce((sum, row, r) => sum + row[joint] * y[r], 0);
-      stateDH.dh[joint].theta = clamp(stateDH.dh[joint].theta + rad2deg(clamp(dq, -0.22, 0.22)), -180, 180);
+      dhParams[joint].theta = clamp(dhParams[joint].theta + rad2deg(clamp(dq, -0.22, 0.22)), -180, 180);
     }
   }
   return { error, iterations, converged: error < 1 };
+}
+
+function solveIK3D(target) {
+  return solveIK3DOnParams(stateDH.dh, target);
 }
 
 // ══════════════════════════════════════
@@ -452,9 +460,6 @@ function drawTarget(x, y, ok) {
   ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI*2); ctx.fill(); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(px-17,py); ctx.lineTo(px+17,py);
   ctx.moveTo(px,py-17); ctx.lineTo(px,py+17); ctx.stroke();
-  ctx.fillStyle = ok ? '#2563eb' : '#df3f3f';
-  ctx.font = '700 12px Inter, system-ui, sans-serif';
-  ctx.fillText('Target', px + 14, py - 14);
   ctx.restore();
 }
 
@@ -562,7 +567,7 @@ function buildDHSliders() {
 // ══════════════════════════════════════
 //  3D Scene (Three.js)
 // ══════════════════════════════════════
-let scene, camera, renderer, orbit, targetMarker;
+let scene, camera, renderer, orbit, targetMarker, trajectory3DGroup;
 let armGroup, gridHelper, axesHelper;
 const linkMeshes = [], jointMeshes = [], frameArrows = [];
 const THREE_COLORS = [0x1e293b, 0xdc2626, 0x0d9488, 0x7c3aed, 0x2563eb, 0xea580c, 0xdb2777];
@@ -700,6 +705,10 @@ function init3D() {
   targetMarker.visible = false;
   scene.add(targetMarker);
 
+  trajectory3DGroup = new THREE.Group();
+  trajectory3DGroup.visible = false;
+  scene.add(trajectory3DGroup);
+
   updateOrbitCamera();
 
   window.addEventListener('resize', () => {
@@ -744,6 +753,48 @@ function buildArm3D() {
   ef.add(new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(), 35, 0x00ff00, 8, 5));
   ef.add(new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(), 35, 0x0000ff, 8, 5));
   armGroup.add(ef); frameArrows.push(ef);
+}
+
+function buildIK3DTrajectory(startDh, target) {
+  if (!$('showTrajectory3D') || !$('showTrajectory3D').checked) return [];
+  const workingDh = cloneDhParams(startDh);
+  const start = {
+    x: numVal('trajStartX3D'),
+    y: numVal('trajStartY3D'),
+    z: numVal('trajStartZ3D'),
+  };
+  const steps = clamp(numVal('trajSteps3DIn'), 8, 48);
+  const path = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const waypoint = {
+      x: start.x + (target.x - start.x) * t,
+      y: start.y + (target.y - start.y) * t,
+      z: start.z + (target.z - start.z) * t,
+    };
+    solveIK3DOnParams(workingDh, waypoint);
+    const end = fkDH(workingDh);
+    path.push({ x: end.x, y: end.y, z: end.z });
+  }
+  return path;
+}
+
+function renderIK3DTrajectory(path) {
+  if (!trajectory3DGroup) return;
+  while (trajectory3DGroup.children.length) trajectory3DGroup.remove(trajectory3DGroup.children[0]);
+  trajectory3DGroup.visible = path && path.length > 1;
+  if (!trajectory3DGroup.visible) return;
+
+  path.forEach((p, i) => {
+    const isEnd = i === path.length - 1;
+    const isStart = i === 0;
+    const dot = new THREE.Mesh(
+      new THREE.SphereGeometry(isStart || isEnd ? 5 : 3, 12, 12),
+      new THREE.MeshBasicMaterial({ color: isStart ? 0xffffff : 0x0d9488 })
+    );
+    dot.position.set(p.x, p.z, -p.y);
+    trajectory3DGroup.add(dot);
+  });
 }
 
 function updateArm3D() {
@@ -822,6 +873,7 @@ function updateVisibility() {
   $('controlsStd').style.display = is3D ? 'none' : '';
   $('controlsDH').style.display = is3D ? '' : 'none';
   $('ik3DTargetPanel').style.display = isIK3D ? '' : 'none';
+  $('ik3DTrajectoryPanel').style.display = isIK3D ? '' : 'none';
   $('dhJointAnglesPanel').style.display = isDH ? '' : 'none';
   $('dhTransferPanel').style.display = isDH ? '' : 'none';
   $('panel2D').style.display = is3D ? 'none' : '';
@@ -877,11 +929,16 @@ function update() {
     let ikResult = null;
     if (m === 'IK3D') {
       const target = { x:numVal('xTarget3D'), y:numVal('yTarget3D'), z:numVal('zTarget3D') };
+      const trajectoryStart = cloneDhParams(stateDH.dh);
       ikResult = solveIK3D(target);
       syncDHTable();
       targetMarker.visible = true;
       targetMarker.position.set(target.x, target.z, -target.y);
-    } else if (targetMarker) targetMarker.visible = false;
+      renderIK3DTrajectory(buildIK3DTrajectory(trajectoryStart, target));
+    } else {
+      if (targetMarker) targetMarker.visible = false;
+      renderIK3DTrajectory([]);
+    }
     const res = updateArm3D();
     const n = stateDH.jointCount;
 
@@ -954,8 +1011,8 @@ function update() {
 
   state.lastThetas = th.slice();
   const pts = fk(lv, th).joints;
-  const end = drawArm2D(pts, lv.length);
   if (tgt) drawTarget(tgt.x, tgt.y, ok);
+  const end = drawArm2D(pts, lv.length);
   const collision = collisionStatus(pts, obstacle, trajectoryPath);
 
   const err = tgt ? Math.hypot(end.x - tgt.x, end.y - tgt.y) : 0;
@@ -1108,7 +1165,7 @@ function buildReportData() {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
     status: $('statusText').textContent,
-    appVersion: 'v46-pinch-zoom-3d',
+    appVersion: 'v54-3d-trajectory-start-point',
     viewImage: captureViewImage(),
     ...data,
   };
@@ -1256,7 +1313,13 @@ function init() {
     if (id === 'trajStepsIn') $('trajStepsRange').value = clamp(Number(event.target.value) || 8, 8, 48);
     update();
   }));
-  ['xTarget3D', 'yTarget3D', 'zTarget3D'].forEach(id => $(id).addEventListener('input', update));
+  ['xTarget3D', 'yTarget3D', 'zTarget3D', 'showTrajectory3D', 'trajStartX3D', 'trajStartY3D', 'trajStartZ3D', 'trajSteps3DRange', 'trajSteps3DIn'].forEach(id => {
+    $(id).addEventListener('input', event => {
+      if (id === 'trajSteps3DRange') $('trajSteps3DIn').value = event.target.value;
+      if (id === 'trajSteps3DIn') $('trajSteps3DRange').value = clamp(Number(event.target.value) || 8, 8, 48);
+      update();
+    });
+  });
   Array.from({ length: STD_JOINT_MAX }, (_, i) => `theta${i + 1}`).forEach(base => {
     $(`${base}Range`).addEventListener('input', e => { $(`${base}In`).value = e.target.value; update(); });
     $(`${base}In`).addEventListener('input', e => { $(`${base}Range`).value = e.target.value; update(); });

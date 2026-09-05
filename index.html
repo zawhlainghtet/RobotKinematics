@@ -24,7 +24,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Robot Arm Kinematics Web Simulator">
   <meta name="twitter:description" content="Interactive FK, IK, DH parameter, Jacobian, 3D robot arm kinematics simulator, and robotics project context.">
-  <link rel="stylesheet" href="./styles.css?v=46">
+  <link rel="stylesheet" href="./styles.css?v=54">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -90,7 +90,7 @@
             </section>
             <section class="panel-section" id="ikPanel">
               <div class="section-head">
-                <div class="section-title">Target</div>
+                <div class="section-title">End Effector</div>
                 <button class="text-button" id="centerTargetBtn" type="button">Center</button>
               </div>
               <div class="field-grid">
@@ -105,7 +105,7 @@
             </section>
             <section class="panel-section" id="trajectoryPanel">
               <div class="section-head">
-                <div class="section-title">Trajectory</div>
+                <div class="section-title">Target Trajectory</div>
                 <label class="switch"><input type="checkbox" id="showTrajectory" checked><span></span></label>
               </div>
               <div class="field-grid">
@@ -161,6 +161,23 @@
                 <label class="field axis-field axis-z"><span>Z</span><input type="number" id="zTarget3D" value="80"></label>
               </div>
               <div class="dh-note">Position only. Orientation is not constrained in this stage.</div>
+            </section>
+            <section class="panel-section" id="ik3DTrajectoryPanel" style="display:none">
+              <div class="section-head">
+                <div class="section-title">3D Trajectory</div>
+                <label class="switch"><input type="checkbox" id="showTrajectory3D" checked><span></span></label>
+              </div>
+              <div class="field-grid-3">
+                <label class="field axis-field axis-x"><span>Start X</span><input type="number" id="trajStartX3D" value="90"></label>
+                <label class="field axis-field axis-y"><span>Start Y</span><input type="number" id="trajStartY3D" value="20"></label>
+                <label class="field axis-field axis-z"><span>Start Z</span><input type="number" id="trajStartZ3D" value="60"></label>
+              </div>
+              <div class="slider-field compact-slider">
+                <label>Steps</label>
+                <input type="range" id="trajSteps3DRange" min="8" max="48" value="15">
+                <input type="number" id="trajSteps3DIn" min="8" max="48" value="15">
+              </div>
+              <div class="dh-note">Preview from start point to the XYZ target.</div>
             </section>
             <section class="panel-section">
               <div class="section-head"><div class="section-title">Joints</div></div>
@@ -329,6 +346,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=46"></script>
+  <script src="./app.js?v=54"></script>
 </body>
 </html>
