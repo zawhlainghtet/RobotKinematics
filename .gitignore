@@ -1,0 +1,7 @@
+# Local recording/demo captures are not required for the static site.
+recording/
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/

@@ -2,7 +2,37 @@
 
 An interactive browser-based robotics simulator for studying robot arm kinematics.
 
-Live site: https://zawhlainghtet.github.io/RobotKinematics/
+## Current Status
+
+- Live custom domain: `https://robotkinematics.study/`
+- GitHub Pages style URL: `https://zawhlainghtet.github.io/RobotKinematics/`
+- App type: static HTML/CSS/JavaScript
+- Server/data required: none
+- Build command: none
+- Publish/output folder: repository root
+- Final entry file: `index.html`
+
+## Files To Host
+
+Host these root files:
+
+- `index.html`
+- `app.js`
+- `styles.css`
+- `favicon.svg`
+- `robots.txt`
+- `sitemap.xml`
+- `googlea367074742ab2e86.html` when Google Search Console verification is still needed
+
+Optional project files:
+
+- `README.md`
+- `LICENSE`
+
+Do not publish development-only media unless needed:
+
+- `recording/`
+- screenshot/output folders
 
 ## Features
 
@@ -18,6 +48,17 @@ Live site: https://zawhlainghtet.github.io/RobotKinematics/
 - Live planar transform matrix for the end-effector pose
 - End-effector position, transform matrix, error values, and report exports
 
-## Keywords
+## Deploy
 
-Robot arm kinematics simulator, forward kinematics, inverse kinematics, DH parameters, Denavit-Hartenberg parameters, Jacobian singularity analysis, 7-DOF robot arm, robotics simulation, web-based robot simulator.
+Use any static host:
+
+- GitHub Pages
+- Cloudflare Pages
+- Netlify
+- Nginx static root on a VPS
+
+See `DEPLOY.md` for exact hosting notes.
+
+## Release Note
+
+Public deploys to `robotkinematics.study` should happen only after Sir Atee previews and approves the version.
