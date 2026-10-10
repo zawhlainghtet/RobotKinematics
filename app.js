@@ -7,12 +7,27 @@ const cy = canvas.height / 2;
 
 const state = {
   draggingTarget: false,
+  dragTrajectoryStartCaptured: false,
   lastThetas: [0, 0, 0, 0, 0],
   viewScale: 1,
   viewZoom: 1,
   canvasPointers: new Map(),
   pinchStartDistance: 0,
   pinchStartZoom: 1,
+};
+const trajectoryPlayback3D = {
+  playing: false,
+  applyingFrame: false,
+  timer: null,
+  frames: [],
+  index: 0,
+};
+const trajectoryPlayback2D = {
+  playing: false,
+  applyingFrame: false,
+  timer: null,
+  frames: [],
+  index: 0,
 };
 const STD_JOINT_MAX = 5;
 const DEFAULT_LINKS = [120, 100, 80, 65, 50];
@@ -355,36 +370,125 @@ function solve2DForTarget(lv, tx, ty, initialThetas) {
   return ccdIk(lv, tx, ty, initialThetas).thetas;
 }
 
-function drawTrajectory(lv, target) {
+function setTrajectory2DStartFromCurrentEE(lv = links()) {
+  const joints = fk(lv, state.lastThetas.slice(0, lv.length)).joints;
+  const end = joints[joints.length - 1];
+  $('trajStartX').value = end.x.toFixed(1);
+  $('trajStartY').value = end.y.toFixed(1);
+}
+
+function buildIK2DTrajectoryFrames(lv, target, initialThetas) {
   if (!$('showTrajectory').checked || mode() !== 'IK' || !target) return null;
   const start = { x: numVal('trajStartX'), y: numVal('trajStartY') };
-  const steps = clamp(numVal('trajStepsIn'), 8, 48);
-  const path = [];
-  let seed = state.lastThetas.slice(0, lv.length);
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
+  const pointCount = clamp(numVal('trajStepsIn'), 8, 48);
+  const frames = [];
+  let seed = initialThetas.slice(0, lv.length);
+  for (let i = 0; i < pointCount; i++) {
+    const t = pointCount === 1 ? 1 : i / (pointCount - 1);
     const x = start.x + (target.x - start.x) * t;
     const y = start.y + (target.y - start.y) * t;
     seed = solve2DForTarget(lv, x, y, seed);
     const joints = fk(lv, seed).joints;
     const end = joints[joints.length - 1];
-    path.push({ x: end.x, y: end.y });
+    const error = Math.hypot(end.x - x, end.y - y);
+    frames.push({
+      thetas: seed.slice(0, lv.length),
+      waypoint: { x, y },
+      ee: { x: end.x, y: end.y },
+      error,
+      converged: error < 1,
+    });
   }
+  return frames;
+}
 
+function drawTrajectoryPath(path) {
+  if (!path || path.length < 2) return null;
   ctx.save();
   path.forEach((p, i) => {
     const isStart = i === 0;
     const isEnd = i === path.length - 1;
-    ctx.fillStyle = isStart ? '#ffffff' : '#0f9f8f';
+    const isCurrent = trajectoryPlayback2D.frames.length > 0 && i === trajectoryPlayback2D.index;
+    ctx.fillStyle = isCurrent ? '#2563eb' : (isStart ? '#f59e0b' : '#0f9f8f');
     ctx.strokeStyle = '#0f9f8f';
     ctx.lineWidth = isStart || isEnd ? 2 : 0;
     ctx.beginPath();
-    ctx.arc(cx + p.x * state.viewScale, cy - p.y * state.viewScale, isStart || isEnd ? 5 : 2.6, 0, Math.PI * 2);
+    ctx.arc(cx + p.x * state.viewScale, cy - p.y * state.viewScale, isCurrent ? 6 : (isStart || isEnd ? 5 : 2.6), 0, Math.PI * 2);
     ctx.fill();
     if (isStart || isEnd) ctx.stroke();
   });
   ctx.restore();
   return path;
+}
+
+function drawTrajectory(lv, target) {
+  const frames = buildIK2DTrajectoryFrames(lv, target, state.lastThetas);
+  const path = frames ? frames.map(frame => frame.ee) : null;
+  return drawTrajectoryPath(path);
+}
+
+function stopTrajectoryPlayback2D() {
+  trajectoryPlayback2D.playing = false;
+  if (trajectoryPlayback2D.timer) clearTimeout(trajectoryPlayback2D.timer);
+  trajectoryPlayback2D.timer = null;
+  if ($('playTrajectory2DBtn')) $('playTrajectory2DBtn').textContent = 'Play';
+}
+
+function buildTrajectoryPlayback2D(lv, target) {
+  stopTrajectoryPlayback2D();
+  trajectoryPlayback2D.frames = buildIK2DTrajectoryFrames(lv, target, state.lastThetas) || [];
+  trajectoryPlayback2D.index = 0;
+  return trajectoryPlayback2D.frames;
+}
+
+function applyTrajectoryPlaybackFrame2D(index) {
+  if (!trajectoryPlayback2D.frames.length) return;
+  trajectoryPlayback2D.index = clamp(index, 0, trajectoryPlayback2D.frames.length - 1);
+  state.lastThetas = trajectoryPlayback2D.frames[trajectoryPlayback2D.index].thetas.slice();
+  trajectoryPlayback2D.applyingFrame = true;
+  update();
+  trajectoryPlayback2D.applyingFrame = false;
+}
+
+function stepTrajectoryPlayback2D() {
+  if (!trajectoryPlayback2D.playing) return;
+  if (trajectoryPlayback2D.index >= trajectoryPlayback2D.frames.length - 1) {
+    stopTrajectoryPlayback2D();
+    setStatus('Trajectory complete');
+    return;
+  }
+  applyTrajectoryPlaybackFrame2D(trajectoryPlayback2D.index + 1);
+  const speed = clamp(numVal('trajSpeed2DIn') || 1, 0.5, 3);
+  trajectoryPlayback2D.timer = setTimeout(stepTrajectoryPlayback2D, Math.round(260 / speed));
+}
+
+function toggleTrajectoryPlayback2D() {
+  if (trajectoryPlayback2D.playing) {
+    stopTrajectoryPlayback2D();
+    setStatus('Trajectory paused', 'warning');
+    return;
+  }
+  const lv = links();
+  const target = { x: numVal('xTarget'), y: numVal('yTarget') };
+  if (!trajectoryPlayback2D.frames.length || trajectoryPlayback2D.index >= trajectoryPlayback2D.frames.length - 1) {
+    buildTrajectoryPlayback2D(lv, target);
+    applyTrajectoryPlaybackFrame2D(0);
+  }
+  if (trajectoryPlayback2D.frames.length < 2) return;
+  trajectoryPlayback2D.playing = true;
+  $('playTrajectory2DBtn').textContent = 'Pause';
+  setStatus('Playing trajectory');
+  const speed = clamp(numVal('trajSpeed2DIn') || 1, 0.5, 3);
+  trajectoryPlayback2D.timer = setTimeout(stepTrajectoryPlayback2D, Math.round(260 / speed));
+}
+
+function resetTrajectoryPlayback2D() {
+  const lv = links();
+  const target = { x: numVal('xTarget'), y: numVal('yTarget') };
+  const frames = trajectoryPlayback2D.frames.length ? trajectoryPlayback2D.frames : buildTrajectoryPlayback2D(lv, target);
+  if (frames.length) applyTrajectoryPlaybackFrame2D(0);
+  stopTrajectoryPlayback2D();
+  setStatus('Trajectory reset');
 }
 
 function drawObstacle() {
@@ -755,28 +859,49 @@ function buildArm3D() {
   armGroup.add(ef); frameArrows.push(ef);
 }
 
-function buildIK3DTrajectory(startDh, target) {
-  if (!$('showTrajectory3D') || !$('showTrajectory3D').checked) return [];
-  const workingDh = cloneDhParams(startDh);
-  const start = {
+function trajectory3DStartPoint() {
+  return {
     x: numVal('trajStartX3D'),
     y: numVal('trajStartY3D'),
     z: numVal('trajStartZ3D'),
   };
-  const steps = clamp(numVal('trajSteps3DIn'), 8, 48);
-  const path = [];
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
+}
+
+function setTrajectory3DStartFromCurrentEE() {
+  const ee = fkDH(stateDH.dh);
+  $('trajStartX3D').value = ee.x.toFixed(2);
+  $('trajStartY3D').value = ee.y.toFixed(2);
+  $('trajStartZ3D').value = ee.z.toFixed(2);
+}
+
+function buildIK3DTrajectoryFrames(startDh, target) {
+  if (!$('showTrajectory3D') || !$('showTrajectory3D').checked) return [];
+  const workingDh = cloneDhParams(startDh);
+  const start = trajectory3DStartPoint();
+  const pointCount = clamp(numVal('trajSteps3DIn'), 8, 48);
+  const frames = [];
+  for (let i = 0; i < pointCount; i++) {
+    const t = pointCount === 1 ? 1 : i / (pointCount - 1);
     const waypoint = {
       x: start.x + (target.x - start.x) * t,
       y: start.y + (target.y - start.y) * t,
       z: start.z + (target.z - start.z) * t,
     };
-    solveIK3DOnParams(workingDh, waypoint);
+    const solve = solveIK3DOnParams(workingDh, waypoint);
     const end = fkDH(workingDh);
-    path.push({ x: end.x, y: end.y, z: end.z });
+    frames.push({
+      dh: cloneDhParams(workingDh),
+      waypoint,
+      ee: { x: end.x, y: end.y, z: end.z },
+      error: solve.error,
+      converged: solve.converged,
+    });
   }
-  return path;
+  return frames;
+}
+
+function buildIK3DTrajectory(startDh, target) {
+  return buildIK3DTrajectoryFrames(startDh, target).map(frame => frame.ee);
 }
 
 function renderIK3DTrajectory(path) {
@@ -788,13 +913,86 @@ function renderIK3DTrajectory(path) {
   path.forEach((p, i) => {
     const isEnd = i === path.length - 1;
     const isStart = i === 0;
+    const isCurrent = trajectoryPlayback3D.frames.length > 0 && i === trajectoryPlayback3D.index;
     const dot = new THREE.Mesh(
-      new THREE.SphereGeometry(isStart || isEnd ? 5 : 3, 12, 12),
-      new THREE.MeshBasicMaterial({ color: isStart ? 0xffffff : 0x0d9488 })
+      new THREE.SphereGeometry(isCurrent ? 7 : (isStart || isEnd ? 5 : 3), 12, 12),
+      new THREE.MeshBasicMaterial({ color: isCurrent ? 0x2563eb : (isStart ? 0xf59e0b : 0x0d9488) })
     );
     dot.position.set(p.x, p.z, -p.y);
     trajectory3DGroup.add(dot);
   });
+}
+
+function stopTrajectoryPlayback3D() {
+  trajectoryPlayback3D.playing = false;
+  if (trajectoryPlayback3D.timer) clearTimeout(trajectoryPlayback3D.timer);
+  trajectoryPlayback3D.timer = null;
+  if ($('playTrajectory3DBtn')) $('playTrajectory3DBtn').textContent = 'Play';
+}
+
+function syncTrajectoryPlaybackControls() {
+  trajectoryPlayback3D.index = clamp(trajectoryPlayback3D.index, 0, Math.max(0, trajectoryPlayback3D.frames.length - 1));
+}
+
+function setDHParams(dhParams) {
+  stateDH.dh = dhParams.map(d => ({ ...d }));
+  syncDHTable();
+}
+
+function applyTrajectoryPlaybackFrame(index) {
+  if (!trajectoryPlayback3D.frames.length) return;
+  trajectoryPlayback3D.index = clamp(index, 0, trajectoryPlayback3D.frames.length - 1);
+  setDHParams(trajectoryPlayback3D.frames[trajectoryPlayback3D.index].dh);
+  trajectoryPlayback3D.applyingFrame = true;
+  update();
+  trajectoryPlayback3D.applyingFrame = false;
+  syncTrajectoryPlaybackControls();
+}
+
+function buildTrajectoryPlayback3D() {
+  stopTrajectoryPlayback3D();
+  const target = { x:numVal('xTarget3D'), y:numVal('yTarget3D'), z:numVal('zTarget3D') };
+  trajectoryPlayback3D.frames = buildIK3DTrajectoryFrames(stateDH.dh, target);
+  trajectoryPlayback3D.index = 0;
+  syncTrajectoryPlaybackControls();
+  return trajectoryPlayback3D.frames;
+}
+
+function stepTrajectoryPlayback3D() {
+  if (!trajectoryPlayback3D.playing) return;
+  if (trajectoryPlayback3D.index >= trajectoryPlayback3D.frames.length - 1) {
+    stopTrajectoryPlayback3D();
+    setStatus('Trajectory complete');
+    return;
+  }
+  applyTrajectoryPlaybackFrame(trajectoryPlayback3D.index + 1);
+  const speed = clamp(numVal('trajSpeed3DIn') || 1, 0.5, 3);
+  trajectoryPlayback3D.timer = setTimeout(stepTrajectoryPlayback3D, Math.round(260 / speed));
+}
+
+function toggleTrajectoryPlayback3D() {
+  if (trajectoryPlayback3D.playing) {
+    stopTrajectoryPlayback3D();
+    setStatus('Trajectory paused', 'warning');
+    return;
+  }
+  if (!trajectoryPlayback3D.frames.length || trajectoryPlayback3D.index >= trajectoryPlayback3D.frames.length - 1) {
+    buildTrajectoryPlayback3D();
+    applyTrajectoryPlaybackFrame(0);
+  }
+  if (trajectoryPlayback3D.frames.length < 2) return;
+  trajectoryPlayback3D.playing = true;
+  $('playTrajectory3DBtn').textContent = 'Pause';
+  setStatus('Playing trajectory');
+  const speed = clamp(numVal('trajSpeed3DIn') || 1, 0.5, 3);
+  trajectoryPlayback3D.timer = setTimeout(stepTrajectoryPlayback3D, Math.round(260 / speed));
+}
+
+function resetTrajectoryPlayback3D() {
+  const frames = trajectoryPlayback3D.frames.length ? trajectoryPlayback3D.frames : buildTrajectoryPlayback3D();
+  if (frames.length) applyTrajectoryPlaybackFrame(0);
+  stopTrajectoryPlayback3D();
+  setStatus('Trajectory reset');
 }
 
 function updateArm3D() {
@@ -930,12 +1128,19 @@ function update() {
     if (m === 'IK3D') {
       const target = { x:numVal('xTarget3D'), y:numVal('yTarget3D'), z:numVal('zTarget3D') };
       const trajectoryStart = cloneDhParams(stateDH.dh);
-      ikResult = solveIK3D(target);
-      syncDHTable();
+      if (trajectoryPlayback3D.applyingFrame && trajectoryPlayback3D.frames.length) {
+        const frame = trajectoryPlayback3D.frames[trajectoryPlayback3D.index];
+        ikResult = { error: frame.error, converged: frame.converged };
+      } else {
+        ikResult = solveIK3D(target);
+        syncDHTable();
+      }
       targetMarker.visible = true;
       targetMarker.position.set(target.x, target.z, -target.y);
-      renderIK3DTrajectory(buildIK3DTrajectory(trajectoryStart, target));
+      const playbackPath = trajectoryPlayback3D.frames.map(frame => frame.ee);
+      renderIK3DTrajectory(playbackPath.length ? playbackPath : buildIK3DTrajectory(trajectoryStart, target));
     } else {
+      stopTrajectoryPlayback3D();
       if (targetMarker) targetMarker.visible = false;
       renderIK3DTrajectory([]);
     }
@@ -982,12 +1187,15 @@ function update() {
       : jac.level === 'near'
         ? 'The chain is close to losing an instantaneous motion direction.'
         : 'The chain has lost an instantaneous motion direction at this configuration.';
-    if (ikResult && !ikResult.converged) setStatus('Approximate 3D IK solution', 'warning');
+    if (trajectoryPlayback3D.applyingFrame) {
+      setStatus(`Trajectory step ${trajectoryPlayback3D.index + 1}/${Math.max(1, trajectoryPlayback3D.frames.length)}`);
+    } else if (ikResult && !ikResult.converged) setStatus('Approximate 3D IK solution', 'warning');
     else setStatus('Ready');
     return;
   }
 
   // 2D IK / FK
+  stopTrajectoryPlayback3D();
   drawGrid();
   const lv = links();
   let th = [], tgt = null, ok = true, trajectoryPath = null;
@@ -1003,9 +1211,16 @@ function update() {
     const mx = lv.reduce((s,v)=>s+v,0);
     const mn = Math.max(0, Math.max(...lv) - (mx - Math.max(...lv)));
     ok = r <= mx && r >= mn;
-    trajectoryPath = drawTrajectory(lv, tgt);
-    th = solve2DForTarget(lv, tgt.x, tgt.y, state.lastThetas);
+    if (trajectoryPlayback2D.applyingFrame && trajectoryPlayback2D.frames.length) {
+      const frame = trajectoryPlayback2D.frames[trajectoryPlayback2D.index];
+      trajectoryPath = drawTrajectoryPath(trajectoryPlayback2D.frames.map(item => item.ee));
+      th = frame.thetas.slice();
+    } else {
+      trajectoryPath = drawTrajectory(lv, tgt);
+      th = solve2DForTarget(lv, tgt.x, tgt.y, state.lastThetas);
+    }
   } else {
+    stopTrajectoryPlayback2D();
     th = Array.from({ length: lv.length }, (_, i) => deg2rad(numVal(`theta${i + 1}In`)));
   }
 
@@ -1035,7 +1250,8 @@ function update() {
   }
 
   const singularity = updateSingularity(lv, th);
-  if (tgt && !ok) setStatus('Target outside reach', 'error');
+  if (trajectoryPlayback2D.applyingFrame) setStatus(`Trajectory step ${trajectoryPlayback2D.index + 1}/${Math.max(1, trajectoryPlayback2D.frames.length)}`);
+  else if (tgt && !ok) setStatus('Target outside reach', 'error');
   else if (collision.level === 'crossing') setStatus('Obstacle crossing', 'error');
   else if (collision.level === 'near') setStatus('Obstacle near link', 'warning');
   else if (tgt && err > 1) setStatus('Approximate solution', 'warning');
@@ -1164,8 +1380,8 @@ function buildReportData() {
   return {
     title: 'Robot Arm Simulator Report',
     generatedAt: new Date().toISOString(),
-    status: $('statusText').textContent,
-    appVersion: 'v54-3d-trajectory-start-point',
+	    status: $('statusText').textContent,
+	    appVersion: 'v61-ee-to-target-playback',
     viewImage: captureViewImage(),
     ...data,
   };
@@ -1285,6 +1501,7 @@ function canvasPinchDistance() {
 function endCanvasPointer(e) {
   state.canvasPointers.delete(e.pointerId);
   state.draggingTarget = false;
+  state.dragTrajectoryStartCaptured = false;
   if (state.canvasPointers.size < 2) state.pinchStartDistance = 0;
 }
 
@@ -1302,24 +1519,66 @@ function init() {
     if (mode() !== 'DH' && mode() !== 'IK3D') { buildJointOutput(linkCount()); update(); }
   }));
 
-  ['elbow'].forEach(n => [...document.getElementsByName(n)].forEach(el => el.addEventListener('change', update)));
-  [
-    ...Array.from({ length: STD_JOINT_MAX }, (_, i) => `L${i + 1}`),
-    'xTarget', 'yTarget', 'showReach', 'showWorkspaceFill',
-    'showTrajectory', 'trajStartX', 'trajStartY', 'trajStepsRange', 'trajStepsIn',
-    'showObstacle', 'obstacleX', 'obstacleY', 'obstacleR',
-  ].forEach(id => $(id).addEventListener('input', event => {
-    if (id === 'trajStepsRange') $('trajStepsIn').value = event.target.value;
-    if (id === 'trajStepsIn') $('trajStepsRange').value = clamp(Number(event.target.value) || 8, 8, 48);
-    update();
-  }));
-  ['xTarget3D', 'yTarget3D', 'zTarget3D', 'showTrajectory3D', 'trajStartX3D', 'trajStartY3D', 'trajStartZ3D', 'trajSteps3DRange', 'trajSteps3DIn'].forEach(id => {
+	  ['elbow'].forEach(n => [...document.getElementsByName(n)].forEach(el => el.addEventListener('change', update)));
+	  [
+	    ...Array.from({ length: STD_JOINT_MAX }, (_, i) => `L${i + 1}`),
+	    'xTarget', 'yTarget', 'showReach', 'showWorkspaceFill',
+	    'showTrajectory', 'trajStartX', 'trajStartY', 'trajStepsRange', 'trajStepsIn',
+	    'showObstacle', 'obstacleX', 'obstacleY', 'obstacleR',
+	  ].forEach(id => $(id).addEventListener('input', event => {
+	    if (id === 'xTarget' || id === 'yTarget') setTrajectory2DStartFromCurrentEE();
+	    stopTrajectoryPlayback2D();
+	    trajectoryPlayback2D.frames = [];
+	    trajectoryPlayback2D.index = 0;
+	    if (id === 'trajStepsRange') $('trajStepsIn').value = event.target.value;
+	    if (id === 'trajStepsIn') $('trajStepsRange').value = clamp(Number(event.target.value) || 8, 8, 48);
+	    update();
+	  }));
+  ['trajSpeed2DRange', 'trajSpeed2DIn'].forEach(id => {
     $(id).addEventListener('input', event => {
-      if (id === 'trajSteps3DRange') $('trajSteps3DIn').value = event.target.value;
-      if (id === 'trajSteps3DIn') $('trajSteps3DRange').value = clamp(Number(event.target.value) || 8, 8, 48);
-      update();
+      const value = clamp(Number(event.target.value) || 1, 0.5, 3);
+      $('trajSpeed2DRange').value = value;
+      $('trajSpeed2DIn').value = value;
     });
   });
+	  $('useCurrentEE2DBtn').addEventListener('click', () => {
+	    stopTrajectoryPlayback2D();
+	    setTrajectory2DStartFromCurrentEE();
+	    trajectoryPlayback2D.frames = [];
+	    trajectoryPlayback2D.index = 0;
+	    update();
+	  });
+  $('playTrajectory2DBtn').addEventListener('click', toggleTrajectoryPlayback2D);
+  $('resetTrajectory2DBtn').addEventListener('click', resetTrajectoryPlayback2D);
+	  ['xTarget3D', 'yTarget3D', 'zTarget3D', 'showTrajectory3D', 'trajStartX3D', 'trajStartY3D', 'trajStartZ3D', 'trajSteps3DRange', 'trajSteps3DIn'].forEach(id => {
+	    $(id).addEventListener('input', event => {
+	      if (id === 'xTarget3D' || id === 'yTarget3D' || id === 'zTarget3D') setTrajectory3DStartFromCurrentEE();
+	      stopTrajectoryPlayback3D();
+	      trajectoryPlayback3D.frames = [];
+	      trajectoryPlayback3D.index = 0;
+	      if (id === 'trajSteps3DRange') $('trajSteps3DIn').value = event.target.value;
+	      if (id === 'trajSteps3DIn') $('trajSteps3DRange').value = clamp(Number(event.target.value) || 8, 8, 48);
+	      syncTrajectoryPlaybackControls();
+	      update();
+	    });
+	  });
+  ['trajSpeed3DRange', 'trajSpeed3DIn'].forEach(id => {
+    $(id).addEventListener('input', event => {
+      const value = clamp(Number(event.target.value) || 1, 0.5, 3);
+      $('trajSpeed3DRange').value = value;
+      $('trajSpeed3DIn').value = value;
+    });
+  });
+	  $('useCurrentEE3DBtn').addEventListener('click', () => {
+	    stopTrajectoryPlayback3D();
+	    setTrajectory3DStartFromCurrentEE();
+	    trajectoryPlayback3D.frames = [];
+	    trajectoryPlayback3D.index = 0;
+	    syncTrajectoryPlaybackControls();
+	    update();
+	  });
+  $('playTrajectory3DBtn').addEventListener('click', toggleTrajectoryPlayback3D);
+  $('resetTrajectory3DBtn').addEventListener('click', resetTrajectoryPlayback3D);
   Array.from({ length: STD_JOINT_MAX }, (_, i) => `theta${i + 1}`).forEach(base => {
     $(`${base}Range`).addEventListener('input', e => { $(`${base}In`).value = e.target.value; update(); });
     $(`${base}In`).addEventListener('input', e => { $(`${base}Range`).value = e.target.value; update(); });
@@ -1350,7 +1609,14 @@ function init() {
     state.lastThetas = [0,0,0,0,0]; buildJointOutput(2); update();
   });
 
-  $('centerTargetBtn').addEventListener('click', () => { $('xTarget').value=0; $('yTarget').value=0; update(); });
+	  $('centerTargetBtn').addEventListener('click', () => {
+	    stopTrajectoryPlayback2D();
+	    setTrajectory2DStartFromCurrentEE();
+	    $('xTarget').value=0; $('yTarget').value=0;
+	    trajectoryPlayback2D.frames = [];
+	    trajectoryPlayback2D.index = 0;
+	    update();
+	  });
   // Canvas drag for IK target
   canvas.addEventListener('pointerdown', e => {
     e.preventDefault();
@@ -1361,11 +1627,13 @@ function init() {
       state.pinchStartDistance = canvasPinchDistance();
       state.pinchStartZoom = state.viewZoom;
       return;
-    }
-    if (mode() !== 'IK') return;
-    state.draggingTarget = true;
-    const p = canvasToWorld(e); $('xTarget').value=p.x.toFixed(0); $('yTarget').value=p.y.toFixed(0); update();
-  });
+	    }
+	    if (mode() !== 'IK') return;
+	    state.draggingTarget = true;
+	    state.dragTrajectoryStartCaptured = true;
+	    setTrajectory2DStartFromCurrentEE();
+	    const p = canvasToWorld(e); $('xTarget').value=p.x.toFixed(0); $('yTarget').value=p.y.toFixed(0); update();
+	  });
   canvas.addEventListener('pointermove', e => {
     e.preventDefault();
     if (!state.canvasPointers.has(e.pointerId)) return;
@@ -1375,10 +1643,14 @@ function init() {
       state.viewZoom = clamp(state.pinchStartZoom * (canvasPinchDistance() / state.pinchStartDistance), 0.55, 2.8);
       update();
       return;
-    }
-    if (!state.draggingTarget || mode() !== 'IK') return;
-    const p = canvasToWorld(e); $('xTarget').value=p.x.toFixed(0); $('yTarget').value=p.y.toFixed(0); update();
-  });
+	    }
+	    if (!state.draggingTarget || mode() !== 'IK') return;
+	    if (!state.dragTrajectoryStartCaptured) {
+	      state.dragTrajectoryStartCaptured = true;
+	      setTrajectory2DStartFromCurrentEE();
+	    }
+	    const p = canvasToWorld(e); $('xTarget').value=p.x.toFixed(0); $('yTarget').value=p.y.toFixed(0); update();
+	  });
   canvas.addEventListener('pointerup', endCanvasPointer);
   canvas.addEventListener('pointercancel', endCanvasPointer);
 

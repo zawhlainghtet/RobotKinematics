@@ -257,6 +257,18 @@ input[type="range"] { width: 100%; accent-color: var(--blue); }
 
 .button-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .wide-button { width: 100%; font-weight: 800; }
+.trajectory-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.trajectory-actions button {
+  min-height: 36px;
+  padding-inline: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
 
 /* ── Joint Counter ── */
 .joint-counter {

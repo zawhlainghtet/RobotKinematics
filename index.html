@@ -25,7 +25,7 @@
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Robot Arm Kinematics Web Simulator">
   <meta name="twitter:description" content="Interactive FK, IK, DH parameter, Jacobian, 3D robot arm kinematics simulator, and robotics project context.">
-  <link rel="stylesheet" href="./styles.css?v=54">
+  <link rel="stylesheet" href="./styles.css?v=61">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -118,6 +118,16 @@
                 <input type="range" id="trajStepsRange" min="8" max="48" value="15">
                 <input type="number" id="trajStepsIn" min="8" max="48" value="15">
               </div>
+              <div class="trajectory-actions">
+                <button type="button" id="useCurrentEE2DBtn">Use Current EE</button>
+                <button type="button" id="playTrajectory2DBtn">Play</button>
+                <button type="button" id="resetTrajectory2DBtn">Reset</button>
+              </div>
+              <div class="slider-field compact-slider">
+                <label>Speed</label>
+                <input type="range" id="trajSpeed2DRange" min="0.5" max="3" step="0.25" value="1">
+                <input type="number" id="trajSpeed2DIn" min="0.5" max="3" step="0.25" value="1">
+              </div>
               <div class="hint">Preview from start point to the IK target.</div>
             </section>
             <section class="panel-section" id="obstaclePanel">
@@ -177,6 +187,16 @@
                 <label>Steps</label>
                 <input type="range" id="trajSteps3DRange" min="8" max="48" value="15">
                 <input type="number" id="trajSteps3DIn" min="8" max="48" value="15">
+              </div>
+              <div class="trajectory-actions">
+                <button type="button" id="useCurrentEE3DBtn">Use Current EE</button>
+                <button type="button" id="playTrajectory3DBtn">Play</button>
+                <button type="button" id="resetTrajectory3DBtn">Reset</button>
+              </div>
+              <div class="slider-field compact-slider">
+                <label>Speed</label>
+                <input type="range" id="trajSpeed3DRange" min="0.5" max="3" step="0.25" value="1">
+                <input type="number" id="trajSpeed3DIn" min="0.5" max="3" step="0.25" value="1">
               </div>
               <div class="dh-note">Preview from start point to the XYZ target.</div>
             </section>
@@ -347,6 +367,6 @@
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="./app.js?v=54"></script>
+  <script src="./app.js?v=61"></script>
 </body>
 </html>
